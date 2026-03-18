@@ -1,0 +1,149 @@
+{
+  "type": "Program",
+  "body": [
+    {
+      "type": "VarDecl",
+      "var_type": "let",
+      "name": "x",
+      "initializer": {
+        "type": "Literal",
+        "value": "10",
+        "lit_type": "number"
+      }
+    },
+    {
+      "type": "VarDecl",
+      "var_type": "let",
+      "name": "y",
+      "initializer": {
+        "type": "Literal",
+        "value": "20",
+        "lit_type": "number"
+      }
+    },
+    {
+      "type": "VarDecl",
+      "var_type": "let",
+      "name": "sum",
+      "initializer": {
+        "type": "BinaryExpr",
+        "op": "+",
+        "left": {
+          "type": "Identifier",
+          "name": "x"
+        },
+        "right": {
+          "type": "Identifier",
+          "name": "y"
+        }
+      }
+    },
+    {
+      "type": "PrintStatement",
+      "format_string": null,
+      "args": [
+        {
+          "type": "Identifier",
+          "name": "sum"
+        }
+      ]
+    },
+    {
+      "type": "IfStatement",
+      "condition": {
+        "type": "BinaryExpr",
+        "op": ">",
+        "left": {
+          "type": "Identifier",
+          "name": "sum"
+        },
+        "right": {
+          "type": "Literal",
+          "value": "25",
+          "lit_type": "number"
+        }
+      },
+      "then_body": [
+        {
+          "type": "PrintStatement",
+          "format_string": null,
+          "args": [
+            {
+              "type": "Literal",
+              "value": "\"big\"",
+              "lit_type": "string"
+            }
+          ]
+        }
+      ],
+      "else_body": [
+        {
+          "type": "PrintStatement",
+          "format_string": null,
+          "args": [
+            {
+              "type": "Literal",
+              "value": "\"small\"",
+              "lit_type": "string"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "VarDecl",
+      "var_type": "let",
+      "name": "i",
+      "initializer": {
+        "type": "Literal",
+        "value": "0",
+        "lit_type": "number"
+      }
+    },
+    {
+      "type": "WhileLoop",
+      "condition": {
+        "type": "BinaryExpr",
+        "op": "<",
+        "left": {
+          "type": "Identifier",
+          "name": "i"
+        },
+        "right": {
+          "type": "Literal",
+          "value": "5",
+          "lit_type": "number"
+        }
+      },
+      "body": [
+        {
+          "type": "PrintStatement",
+          "format_string": null,
+          "args": [
+            {
+              "type": "Identifier",
+              "name": "i"
+            }
+          ]
+        },
+        {
+          "type": "Assignment",
+          "target": "i",
+          "value": {
+            "type": "BinaryExpr",
+            "op": "+",
+            "left": {
+              "type": "Identifier",
+              "name": "i"
+            },
+            "right": {
+              "type": "Literal",
+              "value": "1",
+              "lit_type": "number"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

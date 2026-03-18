@@ -35,7 +35,7 @@ Source Code → Preprocessing → Lexer → Parser (AST) → Semantic Analysis
 | # | Checkpoint | Status | Files |
 |---|-----------|--------|-------|
 | 1 | Project Setup + Preprocessing + Lexer | ✅ **DONE** | `errors.py`, `preprocessor.py`, `lexer.py`, `pipeline.py`, `main.py` |
-| 2 | Parser (Recursive Descent, AST) | 🔲 Not Started | `parser.py` (to create) |
+| 2 | Parser (Recursive Descent, AST) | ✅ **DONE** | `parser.py` |
 | 3 | Semantic Analysis (Symbol Table) | 🔲 Not Started | `semantic.py` (to create) |
 | 4 | IR Generation (Three Address Code) | 🔲 Not Started | `ir_generator.py` (to create) |
 | 5 | IR Optimization | 🔲 Not Started | `optimizer.py` (to create) |
@@ -62,7 +62,7 @@ Cross_Compiler/
 │   ├── preprocessor.py              # ✅ Comment removal, whitespace normalization
 │   ├── lexer.py                     # ✅ Manual tokenizer (C/C++/Python/JS)
 │   ├── pipeline.py                  # ✅ Orchestrator (only implemented phases active)
-│   ├── parser.py                    # 🔲 NOT YET CREATED
+│   ├── parser.py                    # ✅ Recursive descent parser (AST)
 │   ├── semantic.py                  # 🔲 NOT YET CREATED
 │   ├── ir_generator.py              # 🔲 NOT YET CREATED
 │   ├── optimizer.py                 # 🔲 NOT YET CREATED
@@ -144,54 +144,34 @@ All 4 languages produce correct token streams. Artifacts verified manually.
 
 ---
 
-## 🔲 Checkpoint 2 — NEXT: Parser (Recursive Descent)
+## ✅ Checkpoint 2 — COMPLETED: Parser (Recursive Descent)
 
-### What to build
-- File: `compiler/parser.py`
-- Technique: Recursive Descent Parser (LL(1)), one function per grammar rule
-- Output: Language-independent AST (Abstract Syntax Tree)
+### What was built
+
+**Recursive Descent Parser (`compiler/parser.py`)**
+- ~600-line manual LL(1) recursive descent parser
+- 15 AST node classes: `Program`, `FunctionDecl`, `VarDecl`, `Assignment`, `BinaryExpr`, `UnaryExpr`, `Literal`, `Identifier`, `IfStatement`, `WhileLoop`, `ForLoop`, `PrintStatement`, `ReturnStatement`, `FunctionCall`
+- Language-specific top-level parsing for C/C++ (function-based), Python (script-style with indentation), JavaScript (top-level statements)
+- Shared expression parsing with standard operator precedence (||, &&, ==, !=, <, >, +, -, *, /)
+- C: `printf()` with format string, typed variable declarations, brace blocks
+- C++: `cout << expr << endl`, `using namespace std` preamble handling
+- Python: `INDENT`/`DEDENT`-based blocks, `print()`, `for x in range()` conversion to ForLoop
+- JavaScript: `let`/`const`/`var` declarations, `console.log()`, brace blocks
 - Artifact: `artifacts/parser/ast.json`
 
-### AST Node Types to implement
-- `Program` — root node, list of statements/functions
-- `FunctionDecl` — name, params, return type, body
-- `VarDecl` — type (if any), name, initializer expression
-- `Assignment` — target, value expression
-- `BinaryExpr` — operator, left, right
-- `UnaryExpr` — operator, operand
-- `Literal` — number or string value
-- `Identifier` — variable name
-- `IfStatement` — condition, then-body, else-body
-- `WhileLoop` — condition, body
-- `ForLoop` — init, condition, update, body
-- `PrintStatement` — arguments (language-agnostic)
-- `ReturnStatement` — value
-- `FunctionCall` — name, arguments
-- `Block` — list of statements
-
-### Supported grammar (all 4 languages)
-- Variable declarations with optional type annotation
-- Assignment statements
-- Arithmetic expressions with precedence: `+`, `-`, `*`, `/`
-- Relational expressions: `<`, `>`, `==`, `!=`, `<=`, `>=`
-- If / else (elif in Python)
-- While loops
-- Simple for loops
-- Function definitions with parameters
-- Print/output: `printf()`, `cout <<`, `print()`, `console.log()`
-- Return statements
-
-### How to test
-```bash
-python main.py --source samples/hello.c   --from c      --to python --verbose
-# Should show: ✔ preprocessing, ✔ lexical_analysis, ✔ syntax_analysis
-# Artifact: artifacts/parser/ast.json with correct tree structure
-```
-
 ### Integration
-- Add `from compiler.parser import Parser` to `pipeline.py`
-- Uncomment `"syntax_analysis"` in `PHASE_ORDER`
-- Call `parser.parse(tokens)` after lexer, save `ast.json`
+- Added `from compiler.parser import Parser` to `pipeline.py`
+- Uncommented `"syntax_analysis"` in `PHASE_ORDER`
+- Parser runs as Phase 3 after lexer
+
+### How it was tested
+```bash
+python main.py --source samples/hello.c   --from c          --to python     --verbose  # ✔ 81 tokens → AST
+python main.py --source samples/hello.cpp --from cpp        --to python     --verbose  # ✔ 85 tokens → AST
+python main.py --source samples/hello.py  --from python     --to c          --verbose  # ✔ 66 tokens → AST
+python main.py --source samples/hello.js  --from javascript --to python     --verbose  # ✔ 68 tokens → AST
+```
+All 4 languages produce correct AST structures. Artifact `ast.json` verified manually.
 
 ---
 

@@ -8,6 +8,7 @@ import os
 from compiler.errors import CompilerError
 from compiler.preprocessor import Preprocessor
 from compiler.lexer import Lexer
+from compiler.parser import Parser
 
 
 LANG_EXTENSIONS = {
@@ -21,7 +22,7 @@ LANG_EXTENSIONS = {
 PHASE_ORDER = [
     "preprocessing",
     "lexical_analysis",
-    # "syntax_analysis",      # Phase 3 — not yet implemented
+    "syntax_analysis",
     # "semantic_analysis",    # Phase 4 — not yet implemented
     # "ir_generation",        # Phase 5 — not yet implemented
     # "optimization",         # Phase 6 — not yet implemented
@@ -84,6 +85,14 @@ class CompilerPipeline:
                                 [t.to_dict() for t in tokens])
             result["phases"]["lexical_analysis"] = "success"
             self._log(f"  ✔ Lexer produced {len(tokens)} tokens.")
+
+            # ── Phase 3: Syntax Analysis (Parser) ──────────────────────
+            self._log("Phase 3: Syntax Analysis...")
+            parser = Parser(self.source_lang)
+            ast = parser.parse(tokens)
+            self._save_artifact("parser", "ast.json", ast.to_dict())
+            result["phases"]["syntax_analysis"] = "success"
+            self._log("  ✔ Parser produced AST.")
 
             # ── Remaining phases will be added in future checkpoints ────
             self._log("Pipeline complete (implemented phases only).")
