@@ -9,6 +9,8 @@ from compiler.errors import CompilerError
 from compiler.preprocessor import Preprocessor
 from compiler.lexer import Lexer
 from compiler.parser import Parser
+from compiler.semantic import SemanticAnalyzer
+from compiler.ir_generator import IRGenerator
 
 
 LANG_EXTENSIONS = {
@@ -23,8 +25,8 @@ PHASE_ORDER = [
     "preprocessing",
     "lexical_analysis",
     "syntax_analysis",
-    # "semantic_analysis",    # Phase 4 — not yet implemented
-    # "ir_generation",        # Phase 5 — not yet implemented
+    "semantic_analysis",
+    "ir_generation",
     # "optimization",         # Phase 6 — not yet implemented
     # "code_generation",      # Phase 7 — not yet implemented
     # "validation",           # Phase 8 — not yet implemented
@@ -93,6 +95,23 @@ class CompilerPipeline:
             self._save_artifact("parser", "ast.json", ast.to_dict())
             result["phases"]["syntax_analysis"] = "success"
             self._log("  ✔ Parser produced AST.")
+
+            # ── Phase 4: Semantic Analysis ─────────────────────────────
+            self._log("Phase 4: Semantic Analysis...")
+            analyzer = SemanticAnalyzer(self.source_lang)
+            symbol_table = analyzer.analyze(ast)
+            self._save_artifact("semantic", "symbol_table.json",
+                                symbol_table.to_dict())
+            result["phases"]["semantic_analysis"] = "success"
+            self._log(f"  ✔ Semantic analysis passed. {symbol_table.to_dict()['total_symbols']} symbols found.")
+
+            # ── Phase 5: IR Generation ─────────────────────────────────
+            self._log("Phase 5: IR Generation...")
+            ir_gen = IRGenerator()
+            ir_instructions = ir_gen.generate(ast)
+            self._save_artifact("ir", "ir.json", ir_instructions)
+            result["phases"]["ir_generation"] = "success"
+            self._log(f"  ✔ IR generation passed. {len(ir_instructions)} instructions created.")
 
             # ── Remaining phases will be added in future checkpoints ────
             self._log("Pipeline complete (implemented phases only).")

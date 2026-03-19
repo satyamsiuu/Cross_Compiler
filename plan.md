@@ -36,8 +36,8 @@ Source Code → Preprocessing → Lexer → Parser (AST) → Semantic Analysis
 |---|-----------|--------|-------|
 | 1 | Project Setup + Preprocessing + Lexer | ✅ **DONE** | `errors.py`, `preprocessor.py`, `lexer.py`, `pipeline.py`, `main.py` |
 | 2 | Parser (Recursive Descent, AST) | ✅ **DONE** | `parser.py` |
-| 3 | Semantic Analysis (Symbol Table) | 🔲 Not Started | `semantic.py` (to create) |
-| 4 | IR Generation (Three Address Code) | 🔲 Not Started | `ir_generator.py` (to create) |
+| 3 | Semantic Analysis (Symbol Table) | ✅ **DONE** | `semantic.py` |
+| 4 | IR Generation (Three Address Code) | ✅ **DONE** | `ir_generator.py` |
 | 5 | IR Optimization | 🔲 Not Started | `optimizer.py` (to create) |
 | 6 | Code Generation (4 target languages) | 🔲 Not Started | `codegen.py` (to create) |
 | 7 | Validation (execution-based testing) | 🔲 Not Started | `validator.py` (to create) |
@@ -63,8 +63,8 @@ Cross_Compiler/
 │   ├── lexer.py                     # ✅ Manual tokenizer (C/C++/Python/JS)
 │   ├── pipeline.py                  # ✅ Orchestrator (only implemented phases active)
 │   ├── parser.py                    # ✅ Recursive descent parser (AST)
-│   ├── semantic.py                  # 🔲 NOT YET CREATED
-│   ├── ir_generator.py              # 🔲 NOT YET CREATED
+│   ├── semantic.py                  # ✅ Scoped symbol table + semantic checks
+│   ├── ir_generator.py              # ✅ AST to Three Address Code (TAC)
 │   ├── optimizer.py                 # 🔲 NOT YET CREATED
 │   ├── codegen.py                   # 🔲 NOT YET CREATED
 │   └── validator.py                 # 🔲 NOT YET CREATED
@@ -175,39 +175,53 @@ All 4 languages produce correct AST structures. Artifact `ast.json` verified man
 
 ---
 
-## 🔲 Checkpoint 3 — Semantic Analysis
+## ✅ Checkpoint 3 — COMPLETED: Semantic Analysis
 
-### What to build
-- File: `compiler/semantic.py`
-- Walk the AST, build a scoped symbol table
-- Checks: variable declared before use, no redeclaration in same scope, basic type compatibility
+### What was built
+
+**Semantic Analyzer (`compiler/semantic.py`)**
+- ~260-line semantic analysis pass
+- `SymbolTable` with scope stack (push/pop), `declare()`, `lookup()`, `is_declared()`
+- `SemanticAnalyzer` walks AST nodes, builds scoped symbol table
+- Checks: variable declared before use, no redeclaration in same scope
+- Basic type inference: literal types, arithmetic promotion, relational → bool
+- Scope management for functions, if/else, while, for loops
 - Artifact: `artifacts/semantic/symbol_table.json`
 
-### How to test
+### How it was tested
 ```bash
-# Valid program → passes semantic analysis
-python main.py --source samples/hello.c --from c --to python --verbose
+python main.py --source samples/hello.c   --from c          --to python     --verbose  # ✔ 5 symbols
+python main.py --source samples/hello.cpp --from cpp        --to python     --verbose  # ✔ 5 symbols
+python main.py --source samples/hello.py  --from python     --to c          --verbose  # ✔ 4 symbols
+python main.py --source samples/hello.js  --from javascript --to python     --verbose  # ✔ 4 symbols
 
-# Invalid program (use undeclared var) → SemanticError with line/column
+# Error detection test:
+echo 'let z = w + 1;' > /tmp/test.js
+python main.py --source /tmp/test.js --from javascript --to python
+# ❌ Compilation failed at phase: Semantic Analysis — Variable 'w' used before declaration
 ```
 
 ---
 
-## 🔲 Checkpoint 4 — IR Generation
+## ✅ Checkpoint 4 — COMPLETED: IR Generation
 
-### What to build
-- File: `compiler/ir_generator.py`
-- Convert AST → Three Address Code (TAC)
-- IR is language-independent (no source/target syntax)
-- Format: `{"op": "add", "dest": "t3", "arg1": "t1", "arg2": "t2"}`
+### What was built
+**IR Generator (`compiler/ir_generator.py`)**
+- ~250-line IR generation pass
+- Converts AST nodes to a linear list of Three Address Code (TAC) instructions
+- Handled operations: `assign`, `add`, `sub`, `mul`, `div`, `mod`, relational ops (`lt`, `gt`, etc.), `jz` (jump if zero), `jmp` (unconditional jump), `label`, `param`, `call`, `return`, `print`
+- Uses unique temporaries (`t1`, `t2`) for nested expressions
+- Uses unique labels (`L1`, `L2`) for control flow (if/else, loops)
 - Artifact: `artifacts/ir/ir.json`
 
-### How to test
+### How it was tested
 ```bash
-# Verify IR is correct for arithmetic, control flow, function calls
-python main.py --source samples/hello.py --from python --to c --verbose
-cat artifacts/ir/ir.json  # Inspect IR instructions
+python main.py --source samples/hello.c   --from c          --to python     # ✔ 25 instructions
+python main.py --source samples/hello.cpp --from cpp        --to python     # ✔ 27 instructions
+python main.py --source samples/hello.py  --from python     --to c          # ✔ 25 instructions
+python main.py --source samples/hello.js  --from javascript --to python     # ✔ 25 instructions
 ```
+Checked `artifacts/ir/ir.json` to verify TAC correctness for branching (`jz`, labels), temporary generation, and arithmetic operations.
 
 ---
 

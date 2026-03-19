@@ -1,0 +1,33 @@
+{
+  "symbols": [
+    {
+      "name": "x",
+      "type": "int",
+      "scope": "global",
+      "line": null,
+      "column": null
+    },
+    {
+      "name": "y",
+      "type": "int",
+      "scope": "global",
+      "line": null,
+      "column": null
+    },
+    {
+      "name": "sum",
+      "type": "int",
+      "scope": "global",
+      "line": null,
+      "column": null
+    },
+    {
+      "name": "i",
+      "type": "int",
+      "scope": "global",
+      "line": null,
+      "column": null
+    }
+  ],
+  "total_symbols": 4
+}

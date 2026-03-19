@@ -1,0 +1,7 @@
+{
+  "phase": "Semantic Analysis",
+  "error_type": "SemanticError",
+  "message": "Variable 'w' used before declaration",
+  "line": null,
+  "column": null
+}
