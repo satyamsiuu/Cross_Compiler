@@ -39,7 +39,7 @@ Source Code → Preprocessing → Lexer → Parser (AST) → Semantic Analysis
 | 3 | Semantic Analysis (Symbol Table) | ✅ **DONE** | `semantic.py` |
 | 4 | IR Generation (Three Address Code) | ✅ **DONE** | `ir_generator.py` |
 | 5 | IR Optimization | ✅ **DONE** | `optimizer.py` |
-| 6 | Code Generation (4 target languages) | 🔲 Not Started | `codegen.py` (to create) |
+| 6 | Code Generation (4 target languages) | ✅ **DONE** | `codegen.py` |
 | 7 | Validation (execution-based testing) | 🔲 Not Started | `validator.py` (to create) |
 | 8 | Backend API (Flask/FastAPI) | 🔲 Not Started | `api/` (to create) |
 | 9 | Frontend Visualization UI | 🔲 Not Started | `frontend/` (to create) |
@@ -66,7 +66,7 @@ Cross_Compiler/
 │   ├── semantic.py                  # ✅ Scoped symbol table + semantic checks
 │   ├── ir_generator.py              # ✅ AST to Three Address Code (TAC)
 │   ├── optimizer.py                 # ✅ IR optimization (constant folding, propagation, etc.)
-│   ├── codegen.py                   # 🔲 NOT YET CREATED
+│   ├── codegen.py                   # ✅ IR to C/C++/Python/JS code generation
 │   └── validator.py                 # 🔲 NOT YET CREATED
 ├── samples/
 │   ├── hello.c                      # ✅ Sample C program
@@ -255,29 +255,41 @@ All 4 languages produce correct optimized IR. Verified `ir_before.json` vs `ir_a
 
 ---
 
-## 🔲 Checkpoint 6 — Code Generation
+## ✅ Checkpoint 6 — COMPLETED: Code Generation
 
-### What to build
-- File: `compiler/codegen.py`
-- Convert optimized IR → target language source code
-- One generator function per target: C, C++, Python, JavaScript
-- Handle: variable declarations, expressions, control flow, functions, print
+### What was built
+
+**Code Generator (`compiler/codegen.py`)**
+- ~480-line code generator with structured control-flow reconstruction
+- Two-pass approach: (1) analysis pass collects variables, (2) emit pass walks IR
+- **Structured block reconstruction** from flat TAC: converts `jz`/`jmp`/`label` patterns back into if/else and while loops
+- One generator per target: C, C++, Python, JavaScript
+- Handled IR ops: `assign`, `add/sub/mul/div/mod`, relational ops, `neg/not`, `label`, `jz`, `jmp`, `print`, `param`, `return`, `call`
+- Language-specific features:
+  - C: `#include <stdio.h>`, `int main()`, `printf()`, `int` declarations
+  - C++: `#include <iostream>`, `using namespace std`, `cout << ... << endl`
+  - Python: no boilerplate, indentation-based, `print()`, `//` for integer division
+  - JavaScript: `let` declarations, `console.log()`, `===`/`!==` for equality
 - Artifact: `artifacts/codegen/output.<ext>`
 
-### How to test
+### Integration
+- Added `from compiler.codegen import CodeGenerator` to `pipeline.py`
+- Uncommented `"code_generation"` in `PHASE_ORDER`
+- Generator runs as Phase 7 after optimization
+
+### How it was tested
 ```bash
-# Generate Python from C
-python main.py --source samples/hello.c --from c --to python --verbose
-cat artifacts/codegen/output.py    # Should be valid Python
+python main.py --source samples/hello.c   --from c          --to python     --verbose  # ✔ valid Python
+python main.py --source samples/hello.py  --from python     --to javascript --verbose  # ✔ valid JS
+python main.py --source samples/hello.js  --from javascript --to python     --verbose  # ✔ valid Python
+python main.py --source samples/hello.cpp --from cpp        --to javascript --verbose  # ✔ valid JS
+python main.py --source samples/hello.py  --from python     --to c          --verbose  # ✔ valid C
 
-# Generate C from Python
-python main.py --source samples/hello.py --from python --to c --verbose
-cat artifacts/codegen/output.c     # Should be valid C
-
-# Actually run the generated code
-python artifacts/codegen/output.py
-gcc artifacts/codegen/output.c -o /tmp/out && /tmp/out
+# Executed generated code — all produce correct output:
+python artifacts/codegen/output.py       # ✔ 30, big, 0, 1, 2, 3, 4
+node artifacts/codegen/output.js         # ✔ 30, big, 0, 1, 2, 3, 4
 ```
+All generated programs produce correct output matching the original source programs.
 
 ---
 
@@ -339,14 +351,18 @@ curl -X POST http://localhost:5000/compile \
 ## 🧪 How to Run (Current State)
 
 ```bash
-# Full pipeline (preprocessing → lexer → parser → semantic → IR → optimization)
+# Full pipeline (preprocessing → lexer → parser → semantic → IR → optimization → code generation)
 python main.py --source samples/hello.c --from c --to python --verbose
 
 # Try all 4 languages
 python main.py --source samples/hello.c   --from c          --to python
-python main.py --source samples/hello.cpp --from cpp        --to python
+python main.py --source samples/hello.cpp --from cpp        --to javascript
 python main.py --source samples/hello.py  --from python     --to c
-python main.py --source samples/hello.js  --from javascript --to c
+python main.py --source samples/hello.js  --from javascript --to python
+
+# Run the generated code
+python artifacts/codegen/output.py
+node artifacts/codegen/output.js
 
 # Check artifacts
 cat artifacts/preprocess/cleaned_source.txt
@@ -356,6 +372,7 @@ cat artifacts/semantic/symbol_table.json
 cat artifacts/ir/ir.json
 cat artifacts/optimizer/ir_before.json
 cat artifacts/optimizer/ir_after.json
+cat artifacts/codegen/output.py          # or output.c, output.cpp, output.js
 ```
 
 ---

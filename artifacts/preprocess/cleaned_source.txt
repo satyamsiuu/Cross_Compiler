@@ -1,23 +1,19 @@
 
 
-let x = 10;
-let y = 20;
-let sum = x + y;
+x = 10
+y = 20
+sum = x + y
 
 
-console.log(sum);
+print(sum)
+
+if sum > 25:
+    print("big")
+else:
+    print("small")
 
 
-
-if (sum > 25) {
-    console.log("big");
-} else {
-    console.log("small");
-}
-
-
-let i = 0;
-while (i < 5) {
-    console.log(i);
-    i = i + 1;
-}
+i = 0
+while i < 5:
+    print(i)
+    i = i + 1

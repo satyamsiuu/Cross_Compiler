@@ -3,7 +3,7 @@
   "body": [
     {
       "type": "VarDecl",
-      "var_type": "let",
+      "var_type": "auto",
       "name": "x",
       "initializer": {
         "type": "Literal",
@@ -13,7 +13,7 @@
     },
     {
       "type": "VarDecl",
-      "var_type": "let",
+      "var_type": "auto",
       "name": "y",
       "initializer": {
         "type": "Literal",
@@ -23,7 +23,7 @@
     },
     {
       "type": "VarDecl",
-      "var_type": "let",
+      "var_type": "auto",
       "name": "sum",
       "initializer": {
         "type": "BinaryExpr",
@@ -92,7 +92,7 @@
     },
     {
       "type": "VarDecl",
-      "var_type": "let",
+      "var_type": "auto",
       "name": "i",
       "initializer": {
         "type": "Literal",

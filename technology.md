@@ -59,7 +59,7 @@ These libraries do **not** perform compiler logic and are allowed:
 | Semantic Analysis | Python | Symbol table checks |
 | IR Generation | Python | Three Address Code |
 | Optimization | Python | Iterative fixed-point, 4 passes |
-| Code Generation | Python | Language templates |
+| Code Generation | Python | Structured control-flow reconstruction from TAC |
 | Validation | Python | Execution-based testing |
 
 ---

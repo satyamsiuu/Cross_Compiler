@@ -12,6 +12,7 @@ from compiler.parser import Parser
 from compiler.semantic import SemanticAnalyzer
 from compiler.ir_generator import IRGenerator
 from compiler.optimizer import IROptimizer
+from compiler.codegen import CodeGenerator
 
 
 LANG_EXTENSIONS = {
@@ -29,7 +30,7 @@ PHASE_ORDER = [
     "semantic_analysis",
     "ir_generation",
     "optimization",
-    # "code_generation",      # Phase 7 — not yet implemented
+    "code_generation",
     # "validation",           # Phase 8 — not yet implemented
 ]
 
@@ -128,6 +129,17 @@ class CompilerPipeline:
                 for opt_name, count in optimizer.stats.items():
                     if count > 0:
                         self._log(f"    • {opt_name}: {count} applied")
+
+            # ── Phase 7: Code Generation ──────────────────────────────
+            self._log("Phase 7: Code Generation...")
+            generator = CodeGenerator(self.target_lang)
+            generated_code = generator.generate(optimized_ir)
+            ext = LANG_EXTENSIONS[self.target_lang]
+            out_filename = f"output{ext}"
+            out_path = self._save_artifact("codegen", out_filename, generated_code)
+            result["phases"]["code_generation"] = "success"
+            result["output_path"] = out_path
+            self._log(f"  ✔ Code generation passed. Output: {out_filename}")
 
             # ── Remaining phases will be added in future checkpoints ────
             self._log("Pipeline complete (implemented phases only).")

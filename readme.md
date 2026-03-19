@@ -72,7 +72,7 @@ The compiler follows a **classic frontend–middle-end–backend architecture**:
 4. Semantic Analysis ✅
 5. Intermediate Representation (IR) ✅
 6. IR Optimization ✅
-7. Code Generation 🔲
+7. Code Generation ✅
 8. Validation 🔲
 
 Each phase produces a **persistent artifact** for visualization.
@@ -139,6 +139,7 @@ Cross_Compiler/
 │   ├── semantic.py          # Scoped symbol table + checks
 │   ├── ir_generator.py      # AST → Three Address Code
 │   ├── optimizer.py         # IR optimization (4 passes)
+│   ├── codegen.py           # IR → target language code generation
 │   └── pipeline.py          # Phase orchestrator
 ├── samples/                 # Sample programs (C, C++, Python, JS)
 └── artifacts/               # Auto-generated per phase
@@ -148,7 +149,7 @@ Cross_Compiler/
     ├── semantic/            # symbol_table.json
     ├── ir/                  # ir.json
     ├── optimizer/           # ir_before.json, ir_after.json
-    ├── codegen/             # (future)
+    ├── codegen/             # output.c, output.cpp, output.py, output.js
     ├── validation/          # (future)
     └── errors/              # error_report.json
 ```

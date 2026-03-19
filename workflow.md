@@ -206,7 +206,7 @@ artifacts/optimizer/ir_after.json
 
 ---
 
-## 8. Phase 7: Code Generation
+## 8. Phase 7: Code Generation ✅
 
 ### Purpose
 - Convert optimized IR into target language source code
@@ -215,8 +215,10 @@ artifacts/optimizer/ir_after.json
 - **Target language is applied ONLY in this phase**
 
 ### Implementation
-- One code generator per target language
-- Template-based generation
+- One code generator per target language (C, C++, Python, JavaScript)
+- Two-pass approach: analysis pass collects variables, emit pass walks IR
+- Structured control-flow reconstruction from flat TAC (`jz`/`jmp`/`label` → if/else, while loops)
+- Language-specific boilerplate and idioms (printf vs cout vs print vs console.log)
 
 ### Output
 - Source code in selected target language
