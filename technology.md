@@ -58,7 +58,7 @@ These libraries do **not** perform compiler logic and are allowed:
 | Syntax Analysis | Python | Recursive Descent Parser |
 | Semantic Analysis | Python | Symbol table checks |
 | IR Generation | Python | Three Address Code |
-| Optimization | Python | IR-level transformations |
+| Optimization | Python | Iterative fixed-point, 4 passes |
 | Code Generation | Python | Language templates |
 | Validation | Python | Execution-based testing |
 

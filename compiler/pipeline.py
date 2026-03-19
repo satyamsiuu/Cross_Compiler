@@ -11,6 +11,7 @@ from compiler.lexer import Lexer
 from compiler.parser import Parser
 from compiler.semantic import SemanticAnalyzer
 from compiler.ir_generator import IRGenerator
+from compiler.optimizer import IROptimizer
 
 
 LANG_EXTENSIONS = {
@@ -27,7 +28,7 @@ PHASE_ORDER = [
     "syntax_analysis",
     "semantic_analysis",
     "ir_generation",
-    # "optimization",         # Phase 6 — not yet implemented
+    "optimization",
     # "code_generation",      # Phase 7 — not yet implemented
     # "validation",           # Phase 8 — not yet implemented
 ]
@@ -112,6 +113,21 @@ class CompilerPipeline:
             self._save_artifact("ir", "ir.json", ir_instructions)
             result["phases"]["ir_generation"] = "success"
             self._log(f"  ✔ IR generation passed. {len(ir_instructions)} instructions created.")
+
+            # ── Phase 6: IR Optimization ───────────────────────────────
+            self._log("Phase 6: IR Optimization...")
+            self._save_artifact("optimizer", "ir_before.json", ir_instructions)
+            optimizer = IROptimizer()
+            optimized_ir = optimizer.optimize(ir_instructions)
+            self._save_artifact("optimizer", "ir_after.json", optimized_ir)
+            result["phases"]["optimization"] = "success"
+            before_n = len(ir_instructions)
+            after_n = len(optimized_ir)
+            self._log(f"  ✔ Optimization passed. {before_n} → {after_n} instructions.")
+            if optimizer.stats:
+                for opt_name, count in optimizer.stats.items():
+                    if count > 0:
+                        self._log(f"    • {opt_name}: {count} applied")
 
             # ── Remaining phases will be added in future checkpoints ────
             self._log("Pipeline complete (implemented phases only).")

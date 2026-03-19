@@ -181,16 +181,22 @@ artifacts/ir/ir.json
 
 ---
 
-## 7. Phase 6: IR Optimization
+## 7. Phase 6: IR Optimization ✅
 
 ### Purpose
 - Improve IR without changing semantics
+- Reduce instruction count and simplify expressions
 
 ### Supported Optimizations
-- Constant folding
-- Constant propagation
-- Algebraic simplification
-- Limited dead code elimination
+- **Constant Folding:** Evaluate binary ops on two constants at compile time (`t1 = 10 + 20` → `t1 = 30`)
+- **Constant Propagation:** Substitute known constant values into subsequent uses (invalidated at control-flow boundaries)
+- **Algebraic Simplification:** Remove trivial arithmetic (`x + 0` → `x`, `x * 1` → `x`, `x * 0` → `0`)
+- **Dead Code Elimination:** Remove assignments to temporary variables that are never read
+
+### Implementation
+- All 4 passes run iteratively until fixed point (no changes in a full cycle)
+- Conservative approach: labels/jumps clear the constant propagation map
+- Only temporary variables (`t1`, `t2`, …) are candidates for dead code elimination
 
 ### Artifacts
 ```

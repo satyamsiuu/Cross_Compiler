@@ -66,14 +66,14 @@ The compiler follows a **classic frontend–middle-end–backend architecture**:
 
 ## Compiler Phases
 
-1. Preprocessing
-2. Lexical Analysis (Manual Tokenizer)
-3. Syntax Analysis (Recursive Descent Parser)
-4. Semantic Analysis
-5. Intermediate Representation (IR)
-6. IR Optimization
-7. Code Generation
-8. Validation
+1. Preprocessing ✅
+2. Lexical Analysis (Manual Tokenizer) ✅
+3. Syntax Analysis (Recursive Descent Parser) ✅
+4. Semantic Analysis ✅
+5. Intermediate Representation (IR) ✅
+6. IR Optimization ✅
+7. Code Generation 🔲
+8. Validation 🔲
 
 Each phase produces a **persistent artifact** for visualization.
 
@@ -129,16 +129,28 @@ Only deterministic, input-free programs are supported.
 ## Folder Structure
 
 ```text
-artifacts/
-├── preprocess/
-├── lexer/
-├── parser/
-├── semantic/
-├── ir/
-├── optimizer/
-├── codegen/
-├── validation/
-└── errors/
+Cross_Compiler/
+├── main.py                  # CLI entry point
+├── compiler/
+│   ├── errors.py            # Error framework
+│   ├── preprocessor.py      # Comment removal, normalization
+│   ├── lexer.py             # Manual tokenizer
+│   ├── parser.py            # Recursive descent parser (AST)
+│   ├── semantic.py          # Scoped symbol table + checks
+│   ├── ir_generator.py      # AST → Three Address Code
+│   ├── optimizer.py         # IR optimization (4 passes)
+│   └── pipeline.py          # Phase orchestrator
+├── samples/                 # Sample programs (C, C++, Python, JS)
+└── artifacts/               # Auto-generated per phase
+    ├── preprocess/          # cleaned_source.txt
+    ├── lexer/               # tokens.json
+    ├── parser/              # ast.json
+    ├── semantic/            # symbol_table.json
+    ├── ir/                  # ir.json
+    ├── optimizer/           # ir_before.json, ir_after.json
+    ├── codegen/             # (future)
+    ├── validation/          # (future)
+    └── errors/              # error_report.json
 ```
 
 ---

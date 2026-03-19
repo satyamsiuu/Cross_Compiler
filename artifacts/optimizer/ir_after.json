@@ -1,0 +1,110 @@
+[
+  {
+    "op": "assign",
+    "dest": "x",
+    "arg1": "10"
+  },
+  {
+    "op": "assign",
+    "dest": "y",
+    "arg1": "20"
+  },
+  {
+    "op": "assign",
+    "dest": "sum",
+    "arg1": "30"
+  },
+  {
+    "op": "param",
+    "arg1": "30"
+  },
+  {
+    "op": "print",
+    "arg1": 1
+  },
+  {
+    "op": "assign",
+    "dest": "t2",
+    "arg1": "1"
+  },
+  {
+    "op": "jz",
+    "dest": "L1",
+    "arg1": "t2"
+  },
+  {
+    "op": "param",
+    "arg1": "\"big\""
+  },
+  {
+    "op": "print",
+    "arg1": 1
+  },
+  {
+    "op": "jmp",
+    "dest": "L2"
+  },
+  {
+    "op": "label",
+    "dest": "L1"
+  },
+  {
+    "op": "param",
+    "arg1": "\"small\""
+  },
+  {
+    "op": "print",
+    "arg1": 1
+  },
+  {
+    "op": "label",
+    "dest": "L2"
+  },
+  {
+    "op": "assign",
+    "dest": "i",
+    "arg1": "0"
+  },
+  {
+    "op": "label",
+    "dest": "L3"
+  },
+  {
+    "op": "lt",
+    "dest": "t3",
+    "arg1": "i",
+    "arg2": "5"
+  },
+  {
+    "op": "jz",
+    "dest": "L4",
+    "arg1": "t3"
+  },
+  {
+    "op": "param",
+    "arg1": "i"
+  },
+  {
+    "op": "print",
+    "arg1": 1
+  },
+  {
+    "op": "add",
+    "dest": "t4",
+    "arg1": "i",
+    "arg2": "1"
+  },
+  {
+    "op": "assign",
+    "dest": "i",
+    "arg1": "t4"
+  },
+  {
+    "op": "jmp",
+    "dest": "L3"
+  },
+  {
+    "op": "label",
+    "dest": "L4"
+  }
+]

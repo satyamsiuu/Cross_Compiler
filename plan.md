@@ -2,7 +2,7 @@
 
 > **Purpose of this file:** This is the single source of truth for what has been done, what is in progress, and what remains. Feed this file to any LLM or hand it to any developer to get full context instantly.
 
-> **Last Updated:** February 21, 2026
+> **Last Updated:** March 19, 2026
 
 ---
 
@@ -38,7 +38,7 @@ Source Code → Preprocessing → Lexer → Parser (AST) → Semantic Analysis
 | 2 | Parser (Recursive Descent, AST) | ✅ **DONE** | `parser.py` |
 | 3 | Semantic Analysis (Symbol Table) | ✅ **DONE** | `semantic.py` |
 | 4 | IR Generation (Three Address Code) | ✅ **DONE** | `ir_generator.py` |
-| 5 | IR Optimization | 🔲 Not Started | `optimizer.py` (to create) |
+| 5 | IR Optimization | ✅ **DONE** | `optimizer.py` |
 | 6 | Code Generation (4 target languages) | 🔲 Not Started | `codegen.py` (to create) |
 | 7 | Validation (execution-based testing) | 🔲 Not Started | `validator.py` (to create) |
 | 8 | Backend API (Flask/FastAPI) | 🔲 Not Started | `api/` (to create) |
@@ -65,7 +65,7 @@ Cross_Compiler/
 │   ├── parser.py                    # ✅ Recursive descent parser (AST)
 │   ├── semantic.py                  # ✅ Scoped symbol table + semantic checks
 │   ├── ir_generator.py              # ✅ AST to Three Address Code (TAC)
-│   ├── optimizer.py                 # 🔲 NOT YET CREATED
+│   ├── optimizer.py                 # ✅ IR optimization (constant folding, propagation, etc.)
 │   ├── codegen.py                   # 🔲 NOT YET CREATED
 │   └── validator.py                 # 🔲 NOT YET CREATED
 ├── samples/
@@ -76,10 +76,10 @@ Cross_Compiler/
 └── artifacts/                       # Auto-generated per phase
     ├── preprocess/cleaned_source.txt  # ✅ Generated
     ├── lexer/tokens.json              # ✅ Generated
-    ├── parser/                        # 🔲 Empty (ast.json will go here)
-    ├── semantic/                      # 🔲 Empty (symbol_table.json)
-    ├── ir/                            # 🔲 Empty (ir.json)
-    ├── optimizer/                     # 🔲 Empty (ir_before.json, ir_after.json)
+    ├── parser/ast.json                 # ✅ Generated
+    ├── semantic/symbol_table.json       # ✅ Generated
+    ├── ir/ir.json                       # ✅ Generated
+    ├── optimizer/                       # ✅ Generated (ir_before.json, ir_after.json)
     ├── codegen/                       # 🔲 Empty (output.py, output.c, etc.)
     ├── validation/                    # 🔲 Empty (validation_report.json)
     └── errors/                        # Generated on compilation failure
@@ -225,22 +225,33 @@ Checked `artifacts/ir/ir.json` to verify TAC correctness for branching (`jz`, la
 
 ---
 
-## 🔲 Checkpoint 5 — IR Optimization
+## ✅ Checkpoint 5 — COMPLETED: IR Optimization
 
-### What to build
-- File: `compiler/optimizer.py`
-- Constant folding: `t1 = 3 + 5` → `t1 = 8`
-- Constant propagation: if `t1 = 8`, replace all uses of `t1` with `8`
-- Algebraic simplification: `x * 1` → `x`, `x + 0` → `x`
-- Dead code elimination: remove unused assignments
+### What was built
+
+**IR Optimizer (`compiler/optimizer.py`)**
+- ~280-line optimization pass with 4 transformations
+- **Constant Folding:** evaluates binary ops on two literal constants at compile time (e.g. `t1 = 10 + 20` → `t1 = 30`)
+- **Constant Propagation:** substitutes known constant values into subsequent uses, invalidated at control-flow boundaries (labels/jumps)
+- **Algebraic Simplification:** simplifies trivial arithmetic (`x + 0` → `x`, `x * 1` → `x`, `x * 0` → `0`, `x - x` → `0`)
+- **Dead Code Elimination:** removes assignments to temporary variables (`t1`, `t2`, …) that are never read
+- All 4 passes run iteratively until fixed point (no changes in a full cycle)
 - Artifacts: `artifacts/optimizer/ir_before.json`, `artifacts/optimizer/ir_after.json`
 
-### How to test
+### Integration
+- Added `from compiler.optimizer import IROptimizer` to `pipeline.py`
+- Uncommented `"optimization"` in `PHASE_ORDER`
+- Optimizer runs as Phase 6 after IR generation
+- Verbose mode shows instruction count reduction and per-optimization statistics
+
+### How it was tested
 ```bash
-# Compare ir_before.json vs ir_after.json — should be fewer/simpler instructions
-python main.py --source samples/hello.c --from c --to python --verbose
-diff artifacts/optimizer/ir_before.json artifacts/optimizer/ir_after.json
+python main.py --source samples/hello.c   --from c          --to python     --verbose  # ✔ 25 → 24 instructions
+python main.py --source samples/hello.cpp --from cpp        --to python     --verbose  # ✔ optimized
+python main.py --source samples/hello.py  --from python     --to c          --verbose  # ✔ optimized
+python main.py --source samples/hello.js  --from javascript --to python     --verbose  # ✔ optimized
 ```
+All 4 languages produce correct optimized IR. Verified `ir_before.json` vs `ir_after.json` — constant folding computed `10 + 20 = 30` at compile time and dead code eliminated unused temporaries.
 
 ---
 
@@ -328,7 +339,7 @@ curl -X POST http://localhost:5000/compile \
 ## 🧪 How to Run (Current State)
 
 ```bash
-# Basic usage (preprocessing + lexer only for now)
+# Full pipeline (preprocessing → lexer → parser → semantic → IR → optimization)
 python main.py --source samples/hello.c --from c --to python --verbose
 
 # Try all 4 languages
@@ -340,6 +351,11 @@ python main.py --source samples/hello.js  --from javascript --to c
 # Check artifacts
 cat artifacts/preprocess/cleaned_source.txt
 cat artifacts/lexer/tokens.json
+cat artifacts/parser/ast.json
+cat artifacts/semantic/symbol_table.json
+cat artifacts/ir/ir.json
+cat artifacts/optimizer/ir_before.json
+cat artifacts/optimizer/ir_after.json
 ```
 
 ---
