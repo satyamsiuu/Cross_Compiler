@@ -13,6 +13,7 @@ from compiler.semantic import SemanticAnalyzer
 from compiler.ir_generator import IRGenerator
 from compiler.optimizer import IROptimizer
 from compiler.codegen import CodeGenerator
+from compiler.validator import Validator
 
 
 LANG_EXTENSIONS = {
@@ -31,7 +32,7 @@ PHASE_ORDER = [
     "ir_generation",
     "optimization",
     "code_generation",
-    # "validation",           # Phase 8 — not yet implemented
+    "validation",           # Phase 8 — not yet implemented
 ]
 
 
@@ -64,7 +65,7 @@ class CompilerPipeline:
                 f.write(str(data))
         return path
 
-    def compile(self, source_code: str, validate: bool = False) -> dict:
+    def compile(self, source_code: str,source_path: str, validate: bool = False) -> dict:
         """Run the compilation pipeline (only implemented phases)."""
         result = {
             "phases": {},
@@ -140,7 +141,25 @@ class CompilerPipeline:
             result["phases"]["code_generation"] = "success"
             result["output_path"] = out_path
             self._log(f"  ✔ Code generation passed. Output: {out_filename}")
+            # ── Phase 8: Validation ──────────────────────────────
+            if validate:
+                self._log("Phase 8: Validation...")
 
+                validator = Validator()
+
+                validation_result = validator.validate(
+                    source_path=source_path,  # TEMP FIX (see note below)
+                    source_lang=self.source_lang,
+                    generated_code=generated_code,
+                    target_lang=self.target_lang
+                )
+
+                self._save_artifact("validation", "validation_report.json", validation_result)
+
+                result["phases"]["validation"] = "success"
+                result["validation"] = validation_result
+
+                self._log("  ✔ Validation passed.")
             # ── Remaining phases will be added in future checkpoints ────
             self._log("Pipeline complete (implemented phases only).")
 

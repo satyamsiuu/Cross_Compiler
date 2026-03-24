@@ -1,0 +1,6 @@
+{
+  "passed": true,
+  "source_output": "30\nbig\n0\n1\n2\n3\n4",
+  "target_output": "30\nbig\n0\n1\n2\n3\n4",
+  "match": true
+}

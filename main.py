@@ -28,8 +28,10 @@ Examples:
     parser.add_argument("--to", dest="target_lang", required=True,
                         choices=["c", "cpp", "python", "javascript"],
                         help="Target language")
+    parser.add_argument("--validate", action="store_true",
+                        help="Run validation phase (compare outputs)")
     parser.add_argument("--verbose", action="store_true",
-                        help="Print detailed phase information")
+                        help="Enable verbose output")
 
     args = parser.parse_args()
 
@@ -47,7 +49,7 @@ Examples:
     )
 
     try:
-        result = pipeline.compile(source_code)
+        result = pipeline.compile(source_code=source_code, source_path=args.source, validate=args.validate)
 
         print("\n=== Compilation Summary ===")
         for phase, status in result["phases"].items():
@@ -55,6 +57,12 @@ Examples:
             print(f"  {icon} {phase}")
 
         print("\nArtifacts saved to: artifacts/")
+        if args.validate and result.get("validation"):
+            print("\n=== Validation Result ===")
+            if result["validation"]["passed"]:
+                print("  ✅ Outputs match")
+            else:
+                print("  ❌ Outputs do NOT match")
         print("Compilation successful (implemented phases).")
 
     except CompilerError as e:

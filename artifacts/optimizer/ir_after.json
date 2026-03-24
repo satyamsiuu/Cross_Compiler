@@ -1,5 +1,9 @@
 [
   {
+    "op": "label",
+    "dest": "main"
+  },
+  {
     "op": "assign",
     "dest": "x",
     "arg1": "10"
@@ -20,6 +24,7 @@
   },
   {
     "op": "print",
+    "dest": "\"%d\\n\"",
     "arg1": 1
   },
   {
@@ -33,12 +38,9 @@
     "arg1": "t2"
   },
   {
-    "op": "param",
-    "arg1": "\"big\""
-  },
-  {
     "op": "print",
-    "arg1": 1
+    "dest": "\"big\\n\"",
+    "arg1": 0
   },
   {
     "op": "jmp",
@@ -49,12 +51,9 @@
     "dest": "L1"
   },
   {
-    "op": "param",
-    "arg1": "\"small\""
-  },
-  {
     "op": "print",
-    "arg1": 1
+    "dest": "\"small\\n\"",
+    "arg1": 0
   },
   {
     "op": "label",
@@ -86,6 +85,7 @@
   },
   {
     "op": "print",
+    "dest": "\"%d\\n\"",
     "arg1": 1
   },
   {
@@ -106,5 +106,9 @@
   {
     "op": "label",
     "dest": "L4"
+  },
+  {
+    "op": "return",
+    "arg1": "0"
   }
 ]
