@@ -45,9 +45,14 @@
           }
         },
         {
-          "type": "PrintStatement",
-          "format_string": "\"%d\\n\"",
+          "type": "FunctionCall",
+          "name": "printf",
           "args": [
+            {
+              "type": "Literal",
+              "value": "\"%d\\n\"",
+              "lit_type": "string"
+            },
             {
               "type": "Identifier",
               "name": "sum"
@@ -71,16 +76,28 @@
           },
           "then_body": [
             {
-              "type": "PrintStatement",
-              "format_string": "\"big\\n\"",
-              "args": []
+              "type": "FunctionCall",
+              "name": "printf",
+              "args": [
+                {
+                  "type": "Literal",
+                  "value": "\"big\\n\"",
+                  "lit_type": "string"
+                }
+              ]
             }
           ],
           "else_body": [
             {
-              "type": "PrintStatement",
-              "format_string": "\"small\\n\"",
-              "args": []
+              "type": "FunctionCall",
+              "name": "printf",
+              "args": [
+                {
+                  "type": "Literal",
+                  "value": "\"small\\n\"",
+                  "lit_type": "string"
+                }
+              ]
             }
           ]
         },
@@ -111,9 +128,14 @@
           },
           "body": [
             {
-              "type": "PrintStatement",
-              "format_string": "\"%d\\n\"",
+              "type": "FunctionCall",
+              "name": "printf",
               "args": [
+                {
+                  "type": "Literal",
+                  "value": "\"%d\\n\"",
+                  "lit_type": "string"
+                },
                 {
                   "type": "Identifier",
                   "name": "i"

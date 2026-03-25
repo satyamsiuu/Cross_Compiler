@@ -5,34 +5,36 @@
       "type": "int",
       "scope": "global",
       "line": null,
-      "column": null
+      "column": null,
+      "kind": "function",
+      "param_count": 0
     },
     {
       "name": "x",
       "type": "int",
       "scope": "main",
-      "line": null,
+      "line": 5,
       "column": null
     },
     {
       "name": "y",
       "type": "int",
       "scope": "main",
-      "line": null,
+      "line": 6,
       "column": null
     },
     {
       "name": "sum",
       "type": "int",
       "scope": "main",
-      "line": null,
+      "line": 7,
       "column": null
     },
     {
       "name": "i",
       "type": "int",
       "scope": "main",
-      "line": null,
+      "line": 21,
       "column": null
     }
   ],

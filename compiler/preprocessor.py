@@ -2,8 +2,16 @@
 Phase 1: Preprocessor
 - Remove comments
 - Normalize whitespace
+- Validate and strip #include directives (C/C++)
 - Preserve line numbers
 """
+import re
+from compiler.errors import CompilerError
+
+
+class PreprocessorError(CompilerError):
+    def __init__(self, message, line=None, column=None):
+        super().__init__("Preprocessing", "PreprocessorError", message, line, column)
 
 
 class Preprocessor:
@@ -11,11 +19,15 @@ class Preprocessor:
         self.language = language
 
     def process(self, source: str) -> str:
-        """Remove comments and normalize whitespace."""
+        """Remove comments, validate/strip #include, normalize whitespace."""
         if self.language in ("c", "cpp", "javascript"):
             source = self._remove_c_style_comments(source)
         elif self.language == "python":
             source = self._remove_python_comments(source)
+
+        # Validate and strip #include directives (C/C++ only)
+        if self.language in ("c", "cpp"):
+            source = self._handle_includes(source)
 
         # Normalize trailing whitespace per line, preserve blank lines for line numbers
         lines = source.split("\n")
@@ -26,6 +38,38 @@ class Preprocessor:
             lines.pop()
 
         return "\n".join(lines)
+
+    def _handle_includes(self, source: str) -> str:
+        """
+        Validate and strip #include directives for C/C++.
+        Valid forms: #include <header> or #include "header"
+        Invalid forms raise a PreprocessorError.
+        Valid lines are replaced with blank lines to preserve line numbering.
+        """
+        lines = source.split("\n")
+        result = []
+        include_pattern = re.compile(
+            r'^\s*#\s*include\s+'
+            r'(<[a-zA-Z0-9_./]+>|"[a-zA-Z0-9_./]+")'
+            r'\s*$'
+        )
+        bad_include_pattern = re.compile(r'^\s*#\s*include\b')
+
+        for i, line in enumerate(lines, start=1):
+            stripped = line.strip()
+            if include_pattern.match(stripped):
+                # Valid #include — replace with blank line to keep line numbers intact
+                result.append("")
+            elif bad_include_pattern.match(stripped):
+                # Looks like #include but syntax is wrong
+                raise PreprocessorError(
+                    f"Malformed #include directive: '{stripped}'",
+                    line=i
+                )
+            else:
+                result.append(line)
+
+        return "\n".join(result)
 
     def _remove_c_style_comments(self, source: str) -> str:
         """Remove // and /* */ comments while preserving line numbers."""

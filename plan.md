@@ -180,13 +180,19 @@ All 4 languages produce correct AST structures. Artifact `ast.json` verified man
 ### What was built
 
 **Semantic Analyzer (`compiler/semantic.py`)**
-- ~260-line semantic analysis pass
-- `SymbolTable` with scope stack (push/pop), `declare()`, `lookup()`, `is_declared()`
+- ~460-line semantic analysis pass with 18 language-specific + universal constraint checks
+- `SymbolTable` with scope stack (push/pop), `declare()`, `lookup()`, `is_declared()`, `is_declared_in_outer_scope()`
 - `SemanticAnalyzer` walks AST nodes, builds scoped symbol table
-- Checks: variable declared before use, no redeclaration in same scope
+- Core checks: variable declared before use, no redeclaration in same scope
 - Basic type inference: literal types, arithmetic promotion, relational → bool
 - Scope management for functions, if/else, while, for loops
 - Artifact: `artifacts/semantic/symbol_table.json`
+
+**Language-Specific Constraint Checks:**
+- **C/C++ (6 checks):** Integer overflow (32-bit signed), float overflow (±3.4e38), void variable declaration, type mismatch on assignment, modulo with float operands, missing return in non-void function
+- **Python (2 checks):** Invalid `++`/`--` operators, division by zero
+- **JavaScript (2 checks):** Unsafe integer precision (beyond 2^53-1), const reassignment
+- **Universal (8 checks):** Division by zero, function argument count mismatch, unreachable code after return, unused variables (warning), duplicate function declarations, variable shadowing (warning), self-assignment (warning), constant condition detection (warning)
 
 ### How it was tested
 ```bash
@@ -199,6 +205,16 @@ python main.py --source samples/hello.js  --from javascript --to python     --ve
 echo 'let z = w + 1;' > /tmp/test.js
 python main.py --source /tmp/test.js --from javascript --to python
 # ❌ Compilation failed at phase: Semantic Analysis — Variable 'w' used before declaration
+
+# Integer overflow test (C):
+echo 'int main() { int i = 129301029380192301831; printf("%d", i); return 0; }' > /tmp/overflow.c
+python main.py --source /tmp/overflow.c --from c --to python
+# ❌ Compilation failed at phase: Semantic Analysis — Integer overflow
+
+# JS unsafe integer test:
+echo 'let x = 99999999999999999; console.log(x);' > /tmp/unsafe.js
+python main.py --source /tmp/unsafe.js --from javascript --to python
+# ❌ Compilation failed at phase: Semantic Analysis — Exceeds MAX_SAFE_INTEGER
 ```
 
 ---

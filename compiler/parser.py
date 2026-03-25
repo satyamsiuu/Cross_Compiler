@@ -28,11 +28,12 @@ class Program(ASTNode):
 
 
 class FunctionDecl(ASTNode):
-    def __init__(self, name: str, params: list, return_type: str, body: list):
+    def __init__(self, name: str, params: list, return_type: str, body: list, line: int = None):
         self.name = name
         self.params = params          # list of (type, name) or just name
         self.return_type = return_type
         self.body = body
+        self.line = line
 
     def to_dict(self):
         return {
@@ -45,10 +46,11 @@ class FunctionDecl(ASTNode):
 
 
 class VarDecl(ASTNode):
-    def __init__(self, var_type: str, name: str, initializer=None):
+    def __init__(self, var_type: str, name: str, initializer=None, line: int = None):
         self.var_type = var_type       # "int", "float", "let", "const", "auto" (inferred)
         self.name = name
         self.initializer = initializer
+        self.line = line
 
     def to_dict(self):
         return {
@@ -60,9 +62,10 @@ class VarDecl(ASTNode):
 
 
 class Assignment(ASTNode):
-    def __init__(self, target: str, value):
+    def __init__(self, target: str, value, line: int = None):
         self.target = target
         self.value = value
+        self.line = line
 
     def to_dict(self):
         return {
@@ -73,10 +76,11 @@ class Assignment(ASTNode):
 
 
 class BinaryExpr(ASTNode):
-    def __init__(self, op: str, left, right):
+    def __init__(self, op: str, left, right, line: int = None):
         self.op = op
         self.left = left
         self.right = right
+        self.line = line
 
     def to_dict(self):
         return {
@@ -88,9 +92,10 @@ class BinaryExpr(ASTNode):
 
 
 class UnaryExpr(ASTNode):
-    def __init__(self, op: str, operand):
+    def __init__(self, op: str, operand, line: int = None):
         self.op = op
         self.operand = operand
+        self.line = line
 
     def to_dict(self):
         return {
@@ -101,9 +106,10 @@ class UnaryExpr(ASTNode):
 
 
 class Literal(ASTNode):
-    def __init__(self, value, lit_type: str = "number"):
+    def __init__(self, value, lit_type: str = "number", line: int = None):
         self.value = value
         self.lit_type = lit_type  # "number", "string"
+        self.line = line
 
     def to_dict(self):
         return {
@@ -114,8 +120,9 @@ class Literal(ASTNode):
 
 
 class Identifier(ASTNode):
-    def __init__(self, name: str):
+    def __init__(self, name: str, line: int = None):
         self.name = name
+        self.line = line
 
     def to_dict(self):
         return {
@@ -125,10 +132,11 @@ class Identifier(ASTNode):
 
 
 class IfStatement(ASTNode):
-    def __init__(self, condition, then_body: list, else_body: list = None):
+    def __init__(self, condition, then_body: list, else_body: list = None, line: int = None):
         self.condition = condition
         self.then_body = then_body
         self.else_body = else_body
+        self.line = line
 
     def to_dict(self):
         return {
@@ -140,9 +148,10 @@ class IfStatement(ASTNode):
 
 
 class WhileLoop(ASTNode):
-    def __init__(self, condition, body: list):
+    def __init__(self, condition, body: list, line: int = None):
         self.condition = condition
         self.body = body
+        self.line = line
 
     def to_dict(self):
         return {
@@ -153,11 +162,12 @@ class WhileLoop(ASTNode):
 
 
 class ForLoop(ASTNode):
-    def __init__(self, init, condition, update, body: list):
+    def __init__(self, init, condition, update, body: list, line: int = None):
         self.init = init
         self.condition = condition
         self.update = update
         self.body = body
+        self.line = line
 
     def to_dict(self):
         return {
@@ -170,9 +180,10 @@ class ForLoop(ASTNode):
 
 
 class PrintStatement(ASTNode):
-    def __init__(self, args: list, format_string: str = None):
+    def __init__(self, args: list, format_string: str = None, line: int = None):
         self.args = args
         self.format_string = format_string  # For C printf
+        self.line = line
 
     def to_dict(self):
         return {
@@ -183,8 +194,9 @@ class PrintStatement(ASTNode):
 
 
 class ReturnStatement(ASTNode):
-    def __init__(self, value=None):
+    def __init__(self, value=None, line: int = None):
         self.value = value
+        self.line = line
 
     def to_dict(self):
         return {
@@ -194,9 +206,10 @@ class ReturnStatement(ASTNode):
 
 
 class FunctionCall(ASTNode):
-    def __init__(self, name: str, args: list):
+    def __init__(self, name: str, args: list, line: int = None):
         self.name = name
         self.args = args
+        self.line = line
 
     def to_dict(self):
         return {
@@ -404,17 +417,19 @@ class Parser:
 
     def _parse_c_var_decl(self):
         """Parse: type name = expr ;"""
-        var_type = self.advance().value
+        type_tok = self.advance()
+        var_type = type_tok.value
         name = self.expect(TokenType.IDENTIFIER).value
         init = None
         if self.match(TokenType.OPERATOR, "="):
             init = self._parse_expression()
         self.expect(TokenType.SYMBOL, ";")
-        return VarDecl(var_type, name, init)
+        return VarDecl(var_type, name, init, line=type_tok.line)
 
     def _parse_c_assignment_or_call(self):
         """Parse: identifier = expr ; OR identifier ( args ) ;"""
-        name = self.advance().value
+        name_tok = self.advance()
+        name = name_tok.value
 
         # Function call
         if self.peek().type == TokenType.SYMBOL and self.peek().value == "(":
@@ -422,26 +437,26 @@ class Parser:
             args = self._parse_call_args()
             self.expect(TokenType.SYMBOL, ")")
             self.expect(TokenType.SYMBOL, ";")
-            return FunctionCall(name, args)
+            return FunctionCall(name, args, line=name_tok.line)
 
         # Assignment
         self.expect(TokenType.OPERATOR, "=")
         value = self._parse_expression()
         self.expect(TokenType.SYMBOL, ";")
-        return Assignment(name, value)
+        return Assignment(name, value, line=name_tok.line)
 
     def _parse_c_return(self):
         """Parse: return expr ;"""
-        self.advance()  # skip 'return'
+        ret_tok = self.advance()  # skip 'return'
         value = None
         if not (self.peek().type == TokenType.SYMBOL and self.peek().value == ";"):
             value = self._parse_expression()
         self.expect(TokenType.SYMBOL, ";")
-        return ReturnStatement(value)
+        return ReturnStatement(value, line=ret_tok.line)
 
     def _parse_c_if(self):
         """Parse: if ( cond ) { body } else { body }"""
-        self.advance()  # skip 'if'
+        if_tok = self.advance()  # skip 'if'
         self.expect(TokenType.SYMBOL, "(")
         cond = self._parse_expression()
         self.expect(TokenType.SYMBOL, ")")
@@ -457,11 +472,11 @@ class Parser:
             else_body = self._parse_c_block()
             self.expect(TokenType.SYMBOL, "}")
 
-        return IfStatement(cond, then_body, else_body)
+        return IfStatement(cond, then_body, else_body, line=if_tok.line)
 
     def _parse_c_while(self):
         """Parse: while ( cond ) { body }"""
-        self.advance()  # skip 'while'
+        while_tok = self.advance()  # skip 'while'
         self.expect(TokenType.SYMBOL, "(")
         cond = self._parse_expression()
         self.expect(TokenType.SYMBOL, ")")
@@ -470,11 +485,11 @@ class Parser:
         body = self._parse_c_block()
         self.expect(TokenType.SYMBOL, "}")
 
-        return WhileLoop(cond, body)
+        return WhileLoop(cond, body, line=while_tok.line)
 
     def _parse_c_for(self):
         """Parse: for ( init; cond; update ) { body }"""
-        self.advance()  # skip 'for'
+        for_tok = self.advance()  # skip 'for'
         self.expect(TokenType.SYMBOL, "(")
 
         # Init — could be var decl or assignment
@@ -500,7 +515,7 @@ class Parser:
         body = self._parse_c_block()
         self.expect(TokenType.SYMBOL, "}")
 
-        return ForLoop(init, cond, update, body)
+        return ForLoop(init, cond, update, body, line=for_tok.line)
 
     def _parse_c_var_decl_no_semi(self):
         """Parse variable declaration without trailing semicolon (for 'for' init)."""
@@ -533,7 +548,7 @@ class Parser:
 
     def _parse_c_printf(self):
         """Parse: printf( fmt, args... ) ;"""
-        self.advance()  # skip 'printf'
+        printf_tok = self.advance()  # skip 'printf'
         self.expect(TokenType.SYMBOL, "(")
 
         # First argument should be format string
@@ -547,11 +562,11 @@ class Parser:
         self.expect(TokenType.SYMBOL, ")")
         self.expect(TokenType.SYMBOL, ";")
 
-        return PrintStatement(args, format_string=fmt_str)
+        return PrintStatement(args, format_string=fmt_str, line=printf_tok.line)
 
     def _parse_cpp_cout(self):
         """Parse: cout << expr << expr << endl ;"""
-        self.advance()  # skip 'cout'
+        cout_tok = self.advance()  # skip 'cout'
         args = []
 
         while self.peek().type == TokenType.OPERATOR and self.peek().value == "<<":
@@ -563,7 +578,7 @@ class Parser:
             args.append(self._parse_expression())
 
         self.expect(TokenType.SYMBOL, ";")
-        return PrintStatement(args)
+        return PrintStatement(args, line=cout_tok.line)
 
     # ══════════════════════════════════════════════════════════════════════
     #  PYTHON PARSING
@@ -1051,17 +1066,17 @@ class Parser:
         # Number
         if tok.type == TokenType.NUMBER:
             self.advance()
-            return Literal(tok.value, "number")
+            return Literal(tok.value, "number", line=tok.line)
 
         # String
         if tok.type == TokenType.STRING:
             self.advance()
-            return Literal(tok.value, "string")
+            return Literal(tok.value, "string", line=tok.line)
 
         # Boolean / None keywords as literals
         if tok.type == TokenType.KEYWORD and tok.value in ("true", "false", "True", "False", "None", "null"):
             self.advance()
-            return Literal(tok.value, "boolean")
+            return Literal(tok.value, "boolean", line=tok.line)
 
         # Parenthesized expression
         if tok.type == TokenType.SYMBOL and tok.value == "(":
@@ -1078,8 +1093,8 @@ class Parser:
                 self.advance()
                 args = self._parse_call_args()
                 self.expect(TokenType.SYMBOL, ")")
-                return FunctionCall(tok.value, args)
-            return Identifier(tok.value)
+                return FunctionCall(tok.value, args, line=tok.line)
+            return Identifier(tok.value, line=tok.line)
 
         # Keywords that act as identifiers in expressions (e.g., Python 'range')
         if tok.type == TokenType.KEYWORD and tok.value not in (
@@ -1093,8 +1108,8 @@ class Parser:
                 self.advance()
                 args = self._parse_call_args()
                 self.expect(TokenType.SYMBOL, ")")
-                return FunctionCall(tok.value, args)
-            return Identifier(tok.value)
+                return FunctionCall(tok.value, args, line=tok.line)
+            return Identifier(tok.value, line=tok.line)
 
         self._error(f"Unexpected token in expression: '{tok.value}' ({tok.type})")
 

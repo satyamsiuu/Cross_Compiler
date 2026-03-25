@@ -1,17 +1,17 @@
 x = 10
 y = 20
 sum = 30
-print(30)
-t2 = 1
-if t2:
-    print("big")
+t2 = printf("%d\n", 30)
+t3 = (sum > 25)
+if t3:
+    t4 = printf("big\n")
 else:
-    print("small")
+    t5 = printf("small\n")
 i = 0
 while True:
-    t3 = (i < 5)
-    if not t3:
+    t6 = (i < 5)
+    if not t6:
         break
-    print(i)
-    t4 = (i + 1)
-    i = t4
+    t7 = printf("%d\n", i)
+    t8 = (i + 1)
+    i = t8

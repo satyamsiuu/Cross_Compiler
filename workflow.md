@@ -129,11 +129,40 @@ artifacts/parser/ast.json
 ### Purpose
 - Enforce semantic rules
 - Build symbol table
+- Detect language-specific constraint violations
 
 ### Checks Performed
 - Variable declaration before use
 - No redeclaration in same scope
 - Basic type compatibility
+
+### Language-Specific Constraint Checks
+
+**C/C++ (6 checks):**
+- Integer overflow detection (32-bit signed range)
+- Float overflow detection (±3.4e38)
+- Void variable declaration prevention
+- Type mismatch on assignment (string ↔ numeric)
+- Modulo with float operands disallowed
+- Missing return in non-void function
+
+**Python (2 checks):**
+- Invalid `++`/`--` operator usage
+- Division by zero on literal zero
+
+**JavaScript (2 checks):**
+- Unsafe integer precision beyond `2^53 - 1`
+- Const variable reassignment
+
+**Universal (8 checks):**
+- Division by zero (literal zero divisor)
+- Function argument count mismatch
+- Unreachable code after return
+- Unused variable warnings
+- Duplicate function declarations
+- Variable shadowing warnings
+- Self-assignment detection
+- Constant condition detection (always true/false)
 
 ### Output
 - Symbol table
@@ -147,6 +176,11 @@ artifacts/semantic/symbol_table.json
 - Undeclared variable
 - Redeclared variable
 - Type mismatch
+- Integer/float overflow (C/C++)
+- Unsafe integer (JavaScript)
+- Const reassignment (JavaScript)
+- Division by zero
+- Function argument count mismatch
 
 ---
 
