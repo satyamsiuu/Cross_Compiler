@@ -40,7 +40,7 @@ Source Code → Preprocessing → Lexer → Parser (AST) → Semantic Analysis
 | 4 | IR Generation (Three Address Code) | ✅ **DONE** | `ir_generator.py` |
 | 5 | IR Optimization | ✅ **DONE** | `optimizer.py` |
 | 6 | Code Generation (4 target languages) | ✅ **DONE** | `codegen.py` |
-| 7 | Validation (execution-based testing) | 🔲 Not Started | `validator.py` (to create) |
+| 7 | Validation (execution-based testing) | ✅ **DONE** | `validator.py` |
 | 8 | Backend API (Flask/FastAPI) | 🔲 Not Started | `api/` (to create) |
 | 9 | Frontend Visualization UI | 🔲 Not Started | `frontend/` (to create) |
 | 10 | Polish & Documentation | 🔲 Not Started | — |
@@ -66,8 +66,8 @@ Cross_Compiler/
 │   ├── semantic.py                  # ✅ Scoped symbol table + semantic checks
 │   ├── ir_generator.py              # ✅ AST to Three Address Code (TAC)
 │   ├── optimizer.py                 # ✅ IR optimization (constant folding, propagation, etc.)
-│   ├── codegen.py                   # ✅ IR to C/C++/Python/JS code generation
-│   └── validator.py                 # 🔲 NOT YET CREATED
+│   ├── codegen.py                   # ✅ IR → C/C++/Python/JavaScript code generation
+│   └── validator.py                 # ✅ Execution-based output comparison (Phase 8)
 ├── samples/
 │   ├── hello.c                      # ✅ Sample C program
 │   ├── hello.cpp                    # ✅ Sample C++ program
@@ -293,20 +293,26 @@ All generated programs produce correct output matching the original source progr
 
 ---
 
-## 🔲 Checkpoint 7 — Validation
+## ✅ Checkpoint 7 — COMPLETED: Validation
 
-### What to build
-- File: `compiler/validator.py`
-- Execute source program with its runtime (gcc/g++/python3/node)
-- Execute generated target program with its runtime
-- Compare stdout outputs — must match exactly
-- Artifact: `artifacts/validation/validation_report.json`
+### What was built
+**Validator (`compiler/validator.py`)**
+- Executes source program with appropriate runtime (`python3`, `node`, `gcc`/`g++`)
+- Executes generated target program and compares stdout
+- Produces `artifacts/validation/validation_report.json`
+- Integrated into pipeline as Phase 8 (triggered with `--validate` flag)
 
-### How to test
+### How it was tested
 ```bash
-python main.py --source samples/hello.c --from c --to python --validate --verbose
-# Should show: ✔ Validation PASSED — outputs match
+# Python → Python (self-consistency check)
+python main.py --source samples/hello.py --from python --to python --validate
+# ✅ Outputs match: 30, big, 0, 1, 2, 3, 4
+
+# C → Python (cross-language)
+python main.py --source samples/hello.c --from c --to python --validate
+# ✅ Outputs match: 30, big, 0, 1, 2, 3, 4
 ```
+Validation report: `{"passed": true, "source_output": "30\nbig\n0\n1\n2\n3\n4", "target_output": "30\nbig\n..."}`
 
 ---
 
@@ -351,8 +357,9 @@ curl -X POST http://localhost:5000/compile \
 ## 🧪 How to Run (Current State)
 
 ```bash
-# Full pipeline (preprocessing → lexer → parser → semantic → IR → optimization → code generation)
-python main.py --source samples/hello.c --from c --to python --verbose
+# Full pipeline with validation (all 8 phases)
+python main.py --source samples/hello.c --from c --to python --validate --verbose
+python main.py --source samples/hello.py --from python --to python --validate --verbose
 
 # Try all 4 languages
 python main.py --source samples/hello.c   --from c          --to python
