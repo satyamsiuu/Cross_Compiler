@@ -1,17 +1,30 @@
-x = 10
-y = 20
-sum = 30
-t2 = printf("%d\n", 30)
-t3 = (sum > 25)
-if t3:
-    t4 = printf("big\n")
-else:
-    t5 = printf("small\n")
+print("Enter size of array: ")
+n = int(input())
+arr = [0] * (n)
+print("Enter ", n, " elements: ")
 i = 0
-while True:
-    t6 = (i < 5)
-    if not t6:
-        break
-    t7 = printf("%d\n", i)
-    t8 = (i + 1)
-    i = t8
+while (i < n):
+    t2 = int(input())
+    arr[i] = t2
+    i = (i + 1)
+left = 0
+right = (n - 1)
+while (left < right):
+    t6 = arr[left]
+    temp = t6
+    t7 = arr[right]
+    arr[left] = t7
+    arr[right] = temp
+    left = (left + 1)
+    right = (right - 1)
+sum = 0
+print("Reversed array: ")
+i = 0
+while (i < n):
+    t11 = arr[i]
+    print(t11, " ")
+    t12 = arr[i]
+    sum = (sum + t12)
+    i = (i + 1)
+print()
+print("Sum of all elements: ", sum)

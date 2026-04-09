@@ -1,7 +1,7 @@
 {
   "phase": "Syntax Analysis",
   "error_type": "ParserError",
-  "message": "Expected SYMBOL but got IDENTIFIER ('L')",
-  "line": 24,
-  "column": 18
+  "message": "Expected ';' but got ','",
+  "line": 20,
+  "column": 17
 }

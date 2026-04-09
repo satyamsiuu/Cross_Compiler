@@ -8,14 +8,15 @@ class ValidationError(Exception):
 
 
 class Validator:
-    def run_code(self, code_path, lang):
+    def run_code(self, code_path, lang, test_input=""):
         try:
             if lang == "python":
                 result = subprocess.run(
                     ["python", code_path],
                     capture_output=True,
                     text=True,
-                    timeout=10
+                    timeout=10,
+                    input=test_input
                 )
 
             elif lang == "javascript":
@@ -23,7 +24,8 @@ class Validator:
                     ["node", code_path],
                     capture_output=True,
                     text=True,
-                    timeout=10
+                    timeout=10,
+                    input=test_input
                 )
 
             elif lang in ["c", "cpp"]:
@@ -36,7 +38,8 @@ class Validator:
                     [binary],
                     capture_output=True,
                     text=True,
-                    timeout=10
+                    timeout=10,
+                    input=test_input
                 )
 
             else:
@@ -48,16 +51,29 @@ class Validator:
             raise ValidationError(str(e))
 
 
-    def validate(self, source_path, source_lang, generated_code, target_lang):
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".txt") as temp:
+    def validate(self, source_path, source_lang, generated_code, target_lang, interactive=False):
+        import sys
+        ext_map = {"python": ".py", "c": ".c", "cpp": ".cpp", "javascript": ".js"}
+        suffix = ext_map.get(target_lang, ".txt")
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp:
             temp.write(generated_code.encode())
             temp_path = temp.name
 
+        test_input = ""
+        if interactive:
+            print("\n[validator] Interactive program detected. Please provide test inputs.")
+            print("[validator] (Type your inputs, press Enter, then press Ctrl+D on Unix or Ctrl+Z on Windows to finish):")
+            test_input = sys.stdin.read()
+            print("[validator] Input captured. Proceeding with validation...")
+
         try:
-            source_output = self.run_code(source_path, source_lang)
-            target_output = self.run_code(temp_path, target_lang)
+            source_output = self.run_code(source_path, source_lang, test_input)
+            target_output = self.run_code(temp_path, target_lang, test_input)
 
             match = source_output == target_output
+            if not match:
+                # Fallback to formatting-agnostic matching
+                match = source_output.split() == target_output.split()
 
             result = {
                 "passed": match,

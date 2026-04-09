@@ -11,6 +11,7 @@ from compiler.parser import (
     Program, FunctionDecl, VarDecl, Assignment, BinaryExpr, UnaryExpr,
     Literal, Identifier, IfStatement, WhileLoop, ForLoop,
     PrintStatement, ReturnStatement, FunctionCall,
+    ArrayDecl, ArrayAccess, InputExpr,
 )
 
 
@@ -247,6 +248,11 @@ class SemanticAnalyzer:
             self._analyze_return(node)
         elif isinstance(node, FunctionCall):
             self._analyze_function_call(node)
+        elif isinstance(node, ArrayDecl):
+            self._analyze_array_decl(node)
+        elif isinstance(node, InputExpr):
+            for t in node.targets:
+                self._analyze_expr(t)
         elif isinstance(node, list):
             for stmt in node:
                 self._analyze_node(stmt)
@@ -314,25 +320,41 @@ class SemanticAnalyzer:
             decl_keyword=node.var_type,
         )
 
+    def _analyze_array_decl(self, node: ArrayDecl):
+        inferred_type = _normalize_type(node.var_type)
+        if self.symbol_table.is_declared_in_outer_scope(node.name):
+            self.warnings.append(f"Line {_line(node) or '?'}: Array '{node.name}' shadows a variable in an outer scope")
+        if node.size:
+            self._analyze_expr(node.size)
+        self.symbol_table.declare(
+            node.name, inferred_type, line=_line(node),
+            decl_keyword=node.var_type, kind="array"
+        )
+
     def _analyze_assignment(self, node: Assignment):
-        sym = self.symbol_table.lookup(node.target, _line(node))
+        target_name = node.target.name if isinstance(node.target, ArrayAccess) else getattr(node.target, 'name', node.target) if hasattr(node.target, 'name') else node.target
+        sym = self.symbol_table.lookup(target_name, _line(node))
+
+        if isinstance(node.target, ArrayAccess):
+            self._analyze_expr(node.target.index)
 
         if self.language == "javascript" and sym.decl_keyword == "const":
             raise SemanticError(
-                f"Cannot reassign to constant variable '{node.target}'",
+                f"Cannot reassign to constant variable '{target_name}'",
                 _line(node)
             )
 
         val_type = self._analyze_expr(node.value)
 
-        if isinstance(node.value, Identifier) and node.value.name == node.target:
-            self.warnings.append(
-                f"Line {_line(node) or '?'}: Self-assignment detected: "
-                f"'{node.target} = {node.target}' has no effect"
-            )
+        if isinstance(node.value, Identifier) and node.value.name == target_name and not isinstance(node.target, ArrayAccess):
+            if isinstance(node.target, str) or (hasattr(node.target, 'name') and node.target.name == target_name):
+                self.warnings.append(
+                    f"Line {_line(node) or '?'}: Self-assignment detected: "
+                    f"'{target_name} = {target_name}' has no effect"
+                )
 
         if self.language in ("c", "cpp"):
-            self._check_type_mismatch(sym.sym_type, val_type, node.target, _line(node))
+            self._check_type_mismatch(sym.sym_type, val_type, target_name, _line(node))
 
     def _analyze_if(self, node: IfStatement):
         self._analyze_expr(node.condition)
@@ -415,6 +437,12 @@ class SemanticAnalyzer:
         elif isinstance(node, Identifier):
             sym = self.symbol_table.lookup(node.name, _line(node))
             sym.is_used = True
+            return sym.sym_type
+
+        elif isinstance(node, ArrayAccess):
+            sym = self.symbol_table.lookup(node.name, _line(node))
+            sym.is_used = True
+            self._analyze_expr(node.index)
             return sym.sym_type
 
         elif isinstance(node, BinaryExpr):

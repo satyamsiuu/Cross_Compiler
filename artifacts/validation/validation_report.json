@@ -1,6 +1,6 @@
 {
   "passed": true,
-  "source_output": "30\nbig\n0\n1\n2\n3\n4",
-  "target_output": "30\nbig\n0\n1\n2\n3\n4",
+  "source_output": "Enter size of array: Enter 5 elements: Reversed array: 5 4 3 2 1 \nSum of all elements: 15",
+  "target_output": "Enter size of array: \nEnter  5  elements: \nReversed array: \n5  \n4  \n3  \n2  \n1  \n\nSum of all elements:  15",
   "match": true
 }

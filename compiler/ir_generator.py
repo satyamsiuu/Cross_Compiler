@@ -8,6 +8,7 @@ from compiler.parser import (
     Program, FunctionDecl, VarDecl, Assignment, BinaryExpr, UnaryExpr,
     Literal, Identifier, IfStatement, WhileLoop, ForLoop,
     PrintStatement, ReturnStatement, FunctionCall,
+    ArrayDecl, ArrayAccess, InputExpr,
 )
 
 
@@ -76,6 +77,10 @@ class IRGenerator:
             self._generate_return(node)
         elif isinstance(node, FunctionCall):
             self._generate_function_call(node)
+        elif isinstance(node, ArrayDecl):
+            self._generate_array_decl(node)
+        elif isinstance(node, InputExpr):
+            self._generate_input(node)
         elif isinstance(node, list):
             for stmt in node:
                 self._generate_stmt(stmt)
@@ -105,10 +110,31 @@ class IRGenerator:
             value_loc = self._generate_expr(node.initializer)
             self._emit("assign", dest=node.name, arg1=value_loc)
 
+    def _generate_array_decl(self, node: ArrayDecl):
+        size_loc = self._generate_expr(node.size)
+        self._emit("alloc_array", dest=node.name, arg1=size_loc)
+
+    def _generate_input(self, node: InputExpr):
+        for t in node.targets:
+            if isinstance(t, ArrayAccess):
+                temp = self._new_temp()
+                self._emit("input", dest=temp)
+                index_loc = self._generate_expr(t.index)
+                self._emit("array_store", dest=t.name, arg1=index_loc, arg2=temp)
+            else:
+                target_name = getattr(t, 'name', t) if hasattr(t, 'name') else t
+                if isinstance(target_name, str):
+                    self._emit("input", dest=target_name)
+
     def _generate_assignment(self, node: Assignment):
         """Generate IR for an assignment."""
         value_loc = self._generate_expr(node.value)
-        self._emit("assign", dest=node.target, arg1=value_loc)
+        if isinstance(node.target, ArrayAccess):
+            index_loc = self._generate_expr(node.target.index)
+            self._emit("array_store", dest=node.target.name, arg1=index_loc, arg2=value_loc)
+        else:
+            target_name = node.target.name if hasattr(node.target, 'name') else str(node.target)
+            self._emit("assign", dest=target_name, arg1=value_loc)
 
     def _generate_if(self, node: IfStatement):
         """Generate IR for an if/else statement."""
@@ -203,6 +229,12 @@ class IRGenerator:
 
     def _generate_expr(self, node) -> str:
         """Generate IR for an expression, returning the location (temp or id)."""
+        if isinstance(node, ArrayAccess):
+            index_loc = self._generate_expr(node.index)
+            temp = self._new_temp()
+            self._emit("array_load", dest=temp, arg1=node.name, arg2=index_loc)
+            return temp
+
         if isinstance(node, Literal):
             return str(node.value)
 
@@ -224,12 +256,30 @@ class IRGenerator:
             return temp
 
         elif isinstance(node, UnaryExpr):
-            operand_loc = self._generate_expr(node.operand)
-            temp = self._new_temp()
-            op_map = {"-": "neg", "!": "not", "not": "not"}
-            op_str = op_map.get(node.op, node.op)
-            self._emit(op_str, dest=temp, arg1=operand_loc)
-            return temp
+            if node.op in ("post_inc", "post_dec"):
+                is_inc = node.op == "post_inc"
+                math_op = "add" if is_inc else "sub"
+                if isinstance(node.operand, ArrayAccess):
+                    index_loc = self._generate_expr(node.operand.index)
+                    arr_val = self._new_temp()
+                    self._emit("array_load", dest=arr_val, arg1=node.operand.name, arg2=index_loc)
+                    new_val = self._new_temp()
+                    self._emit(math_op, dest=new_val, arg1=arr_val, arg2="1")
+                    self._emit("array_store", dest=node.operand.name, arg1=index_loc, arg2=new_val)
+                    return arr_val # Technically old value for postfix
+                else:
+                    target_name = node.operand.name if hasattr(node.operand, 'name') else str(node.operand)
+                    new_val = self._new_temp()
+                    self._emit(math_op, dest=new_val, arg1=target_name, arg2="1")
+                    self._emit("assign", dest=target_name, arg1=new_val)
+                    return target_name
+            else:
+                operand_loc = self._generate_expr(node.operand)
+                temp = self._new_temp()
+                op_map = {"-": "neg", "!": "not", "not": "not"}
+                op_str = op_map.get(node.op, node.op)
+                self._emit(op_str, dest=temp, arg1=operand_loc)
+                return temp
 
         elif isinstance(node, FunctionCall):
             for arg in node.args:

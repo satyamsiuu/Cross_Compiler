@@ -49,7 +49,7 @@ KEYWORDS = {
     },
     "cpp": {
         "int", "float", "double", "char", "void", "return",
-        "if", "else", "while", "for", "cout", "endl", "std", "using",
+        "if", "else", "while", "for", "cout", "cin", "endl", "std", "using",
         "namespace", "include", "iostream", "bool", "true", "false",
     },
     "python": {
@@ -65,7 +65,7 @@ KEYWORDS = {
 }
 
 # Two-character operators
-TWO_CHAR_OPS = {"==", "!=", "<=", ">=", "&&", "||", "++", "--", "+=", "-=", "*=", "/=", "<<"}
+TWO_CHAR_OPS = {"==", "!=", "<=", ">=", "&&", "||", "++", "--", "+=", "-=", "*=", "/=", "<<", ">>"}
 ONE_CHAR_OPS = {"+", "-", "*", "/", "%", "=", "<", ">", "!", "&", "|"}
 SYMBOLS = {"(", ")", "{", "}", "[", "]", ",", ";", ":", "."}
 

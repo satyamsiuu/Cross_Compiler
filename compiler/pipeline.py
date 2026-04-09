@@ -147,11 +147,14 @@ class CompilerPipeline:
 
                 validator = Validator()
 
+                has_input = any(instr.get("op") == "input" for instr in optimized_ir)
+
                 validation_result = validator.validate(
                     source_path=source_path,  # TEMP FIX (see note below)
                     source_lang=self.source_lang,
                     generated_code=generated_code,
-                    target_lang=self.target_lang
+                    target_lang=self.target_lang,
+                    interactive=has_input
                 )
 
                 self._save_artifact("validation", "validation_report.json", validation_result)

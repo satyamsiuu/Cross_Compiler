@@ -274,9 +274,9 @@ artifacts/codegen/output.<lang>
 - Execute generated target program
 - Compare stdout outputs
 
-### Constraints
-- No interactive input (scanf, input, cin)
-- Deterministic programs only
+### Features Supported
+- Interactive input (`scanf`, `input`, `cin`, `prompt`) via dynamic `sys.stdin` validation intercepts.
+- Deterministic execution and arrays.
 
 ### Artifact
 ```

@@ -62,7 +62,7 @@ class VarDecl(ASTNode):
 
 
 class Assignment(ASTNode):
-    def __init__(self, target: str, value, line: int = None):
+    def __init__(self, target, value, line: int = None):
         self.target = target
         self.value = value
         self.line = line
@@ -70,8 +70,8 @@ class Assignment(ASTNode):
     def to_dict(self):
         return {
             "type": "Assignment",
-            "target": self.target,
-            "value": self.value.to_dict(),
+            "target": self.target.to_dict() if hasattr(self.target, 'to_dict') else self.target,
+            "value": self.value.to_dict() if hasattr(self.value, 'to_dict') else self.value,
         }
 
 
@@ -221,6 +221,47 @@ class FunctionCall(ASTNode):
 
 # ── Parser ───────────────────────────────────────────────────────────────────
 
+
+
+class ArrayDecl(ASTNode):
+    def __init__(self, var_type: str, name: str, size, line: int = None):
+        self.var_type = var_type
+        self.name = name
+        self.size = size
+        self.line = line
+
+    def to_dict(self):
+        return {
+            "type": "ArrayDecl",
+            "var_type": self.var_type,
+            "name": self.name,
+            "size": self.size.to_dict() if hasattr(self.size, 'to_dict') else self.size,
+        }
+
+class ArrayAccess(ASTNode):
+    def __init__(self, name: str, index, line: int = None):
+        self.name = name
+        self.index = index
+        self.line = line
+
+    def to_dict(self):
+        return {
+            "type": "ArrayAccess",
+            "name": self.name,
+            "index": self.index.to_dict(),
+        }
+
+class InputExpr(ASTNode):
+    def __init__(self, targets: list, line: int = None):
+        self.targets = targets
+        self.line = line
+
+    def to_dict(self):
+        return {
+            "type": "InputExpr",
+            "targets": [t.to_dict() if hasattr(t, 'to_dict') else t for t in self.targets],
+        }
+
 class Parser:
     """
     Recursive Descent Parser.
@@ -363,7 +404,11 @@ class Parser:
         while not (self.peek().type == TokenType.SYMBOL and self.peek().value == "}"):
             if self.peek().type == TokenType.EOF:
                 self._error("Unexpected end of file — missing '}'")
-            stmts.append(self._parse_c_statement())
+            stmt = self._parse_c_statement()
+            if isinstance(stmt, list):
+                stmts.extend(stmt)
+            else:
+                stmts.append(stmt)
         return stmts
 
     def _parse_c_statement(self):
@@ -404,6 +449,10 @@ class Parser:
         if tok.type == TokenType.KEYWORD and tok.value == "cout":
             return self._parse_cpp_cout()
 
+        # Cin (C++)
+        if tok.type == TokenType.KEYWORD and tok.value == "cin":
+            return self._parse_cpp_cin()
+
         # Variable declaration: type identifier ...
         type_keywords = self.CPP_TYPES if self.language == "cpp" else self.C_TYPES
         if tok.type == TokenType.KEYWORD and tok.value in type_keywords:
@@ -416,15 +465,29 @@ class Parser:
         self._error(f"Unexpected token: '{tok.value}'")
 
     def _parse_c_var_decl(self):
-        """Parse: type name = expr ;"""
+        """Parse: type name = expr ; OR type name [ expr ] ;"""
         type_tok = self.advance()
         var_type = type_tok.value
-        name = self.expect(TokenType.IDENTIFIER).value
-        init = None
-        if self.match(TokenType.OPERATOR, "="):
-            init = self._parse_expression()
+        
+        decls = []
+        while True:
+            name = self.expect(TokenType.IDENTIFIER).value
+            
+            if self.match(TokenType.SYMBOL, "["):
+                size = self._parse_expression()
+                self.expect(TokenType.SYMBOL, "]")
+                decls.append(ArrayDecl(var_type, name, size, line=type_tok.line))
+            else:
+                init = None
+                if self.match(TokenType.OPERATOR, "="):
+                    init = self._parse_expression()
+                decls.append(VarDecl(var_type, name, init, line=type_tok.line))
+                
+            if not self.match(TokenType.SYMBOL, ","):
+                break
+
         self.expect(TokenType.SYMBOL, ";")
-        return VarDecl(var_type, name, init, line=type_tok.line)
+        return decls if len(decls) > 1 else decls[0]
 
     def _parse_c_assignment_or_call(self):
         """Parse: identifier = expr ; OR identifier ( args ) ;"""
@@ -439,11 +502,31 @@ class Parser:
             self.expect(TokenType.SYMBOL, ";")
             return FunctionCall(name, args, line=name_tok.line)
 
+        target = Identifier(name, line=name_tok.line)
+        if self.match(TokenType.SYMBOL, "["):
+            index = self._parse_expression()
+            self.expect(TokenType.SYMBOL, "]")
+            target = ArrayAccess(name, index, line=name_tok.line)
+            
+        tok = self.peek()
+        if tok.type == TokenType.OPERATOR and tok.value in ("++", "--"):
+            op = self.advance().value
+            self.expect(TokenType.SYMBOL, ";")
+            return UnaryExpr("post_inc" if op == "++" else "post_dec", target, line=name_tok.line)
+
         # Assignment
-        self.expect(TokenType.OPERATOR, "=")
-        value = self._parse_expression()
-        self.expect(TokenType.SYMBOL, ";")
-        return Assignment(name, value, line=name_tok.line)
+        tok = self.peek()
+        if tok.type == TokenType.OPERATOR and tok.value in ("=", "+=", "-=", "*=", "/="):
+            op = self.advance().value
+            value = self._parse_expression()
+            self.expect(TokenType.SYMBOL, ";")
+            if op == "=":
+                return Assignment(target, value, line=name_tok.line)
+            else:
+                core_op = op[:-1]
+                return Assignment(target, BinaryExpr(core_op, target, value), line=name_tok.line)
+
+        self._error("Invalid assignment or call")
 
     def _parse_c_return(self):
         """Parse: return expr ;"""
@@ -528,23 +611,32 @@ class Parser:
 
     def _parse_c_for_update(self):
         """Parse the update part of a for loop (e.g., i++, i = i + 1)."""
-        name = self.expect(TokenType.IDENTIFIER).value
+        name_tok = self.expect(TokenType.IDENTIFIER)
+        name = name_tok.value
+        target = Identifier(name, line=name_tok.line)
 
+        if self.match(TokenType.SYMBOL, "["):
+            index = self._parse_expression()
+            self.expect(TokenType.SYMBOL, "]")
+            target = ArrayAccess(name, index, line=name_tok.line)
+
+        tok = self.peek()
         # i++
-        if self.peek().type == TokenType.OPERATOR and self.peek().value == "++":
-            self.advance()
-            return Assignment(name, BinaryExpr("+", Identifier(name), Literal("1")))
+        if tok.type == TokenType.OPERATOR and tok.value in ("++", "--"):
+            op = self.advance().value
+            return UnaryExpr("post_inc" if op == "++" else "post_dec", target, line=name_tok.line)
 
         # i += expr
-        if self.peek().type == TokenType.OPERATOR and self.peek().value == "+=":
-            self.advance()
-            val = self._parse_expression()
-            return Assignment(name, BinaryExpr("+", Identifier(name), val))
+        if tok.type == TokenType.OPERATOR and tok.value in ("=", "+=", "-=", "*=", "/="):
+            op = self.advance().value
+            value = self._parse_expression()
+            if op == "=":
+                return Assignment(target, value, line=name_tok.line)
+            else:
+                core_op = op[:-1]
+                return Assignment(target, BinaryExpr(core_op, target, value), line=name_tok.line)
 
-        # i = expr
-        self.expect(TokenType.OPERATOR, "=")
-        value = self._parse_expression()
-        return Assignment(name, value)
+        self._error("Invalid for loop update")
 
     def _parse_c_printf(self):
         """Parse: printf( fmt, args... ) ;"""
@@ -579,6 +671,20 @@ class Parser:
 
         self.expect(TokenType.SYMBOL, ";")
         return PrintStatement(args, line=cout_tok.line)
+
+    def _parse_cpp_cin(self):
+        cin_tok = self.advance()
+        targets = []
+        while self.match(TokenType.OPERATOR, ">>"):
+            name_tok = self.expect(TokenType.IDENTIFIER)
+            target = Identifier(name_tok.value, line=name_tok.line)
+            if self.match(TokenType.SYMBOL, "["):
+                index = self._parse_expression()
+                self.expect(TokenType.SYMBOL, "]")
+                target = ArrayAccess(name_tok.value, index, line=name_tok.line)
+            targets.append(target)
+        self.expect(TokenType.SYMBOL, ";")
+        return InputExpr(targets, line=cin_tok.line)
 
     # ══════════════════════════════════════════════════════════════════════
     #  PYTHON PARSING
@@ -1094,6 +1200,11 @@ class Parser:
                 args = self._parse_call_args()
                 self.expect(TokenType.SYMBOL, ")")
                 return FunctionCall(tok.value, args, line=tok.line)
+            if self.peek().type == TokenType.SYMBOL and self.peek().value == "[":
+                self.advance()
+                index = self._parse_expression()
+                self.expect(TokenType.SYMBOL, "]")
+                return ArrayAccess(tok.value, index, line=tok.line)
             return Identifier(tok.value, line=tok.line)
 
         # Keywords that act as identifiers in expressions (e.g., Python 'range')

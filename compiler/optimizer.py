@@ -203,14 +203,16 @@ class IROptimizer:
                     changed = True
                     self.stats["constant_propagation"] += 1
 
-            # Track new constant assignments: x = <const>
+            # Track new constant assignments: x = <const>. Only propagate temporaries
+            # to preserve user variable structure across statements.
             if op == "assign" and "dest" in new_instr:
+                dest = new_instr["dest"]
                 val = new_instr.get("arg1")
-                if _is_numeric(str(val)):
-                    const_map[new_instr["dest"]] = str(val)
+                is_temp = dest is not None and isinstance(dest, str) and dest.startswith("t") and dest[1:].isdigit()
+                if is_temp and _is_numeric(str(val)):
+                    const_map[dest] = str(val)
                 else:
-                    # Variable is assigned a non-constant — remove from map
-                    const_map.pop(new_instr["dest"], None)
+                    const_map.pop(dest, None)
             elif "dest" in new_instr and op not in {"label", "print"}:
                 # Any other write to dest invalidates it
                 const_map.pop(new_instr.get("dest"), None)
@@ -319,7 +321,7 @@ class IROptimizer:
             if (dest and isinstance(dest, str) and
                     dest.startswith("t") and dest[1:].isdigit() and
                     dest not in used and
-                    op not in CONTROL_FLOW_OPS and op not in {"print", "param", "return"}):
+                    op not in CONTROL_FLOW_OPS and op not in {"print", "param", "return", "alloc_array", "array_store", "input", "array_load"}):
                 self.stats["dead_code_elimination"] += 1
                 changed = True
                 continue  # Skip this instruction — it's dead

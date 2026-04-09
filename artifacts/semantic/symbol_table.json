@@ -10,33 +10,61 @@
       "param_count": 0
     },
     {
-      "name": "x",
+      "name": "n",
       "type": "int",
       "scope": "main",
       "line": 5,
       "column": null
     },
     {
-      "name": "y",
+      "name": "arr",
       "type": "int",
       "scope": "main",
-      "line": 6,
+      "line": 11,
+      "column": null
+    },
+    {
+      "name": "i",
+      "type": "int",
+      "scope": "for",
+      "line": null,
+      "column": null
+    },
+    {
+      "name": "left",
+      "type": "int",
+      "scope": "main",
+      "line": 20,
+      "column": null
+    },
+    {
+      "name": "right",
+      "type": "int",
+      "scope": "main",
+      "line": 20,
+      "column": null
+    },
+    {
+      "name": "temp",
+      "type": "int",
+      "scope": "while",
+      "line": 22,
       "column": null
     },
     {
       "name": "sum",
       "type": "int",
       "scope": "main",
-      "line": 7,
+      "line": 31,
       "column": null
     },
     {
       "name": "i",
       "type": "int",
-      "scope": "main",
-      "line": 21,
+      "scope": "for",
+      "line": null,
       "column": null
     }
   ],
-  "total_symbols": 5
+  "total_symbols": 9
 }

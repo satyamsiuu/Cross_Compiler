@@ -14,7 +14,7 @@
 
 **Key Constraint:** All compiler phases (lexer, parser, semantic, IR, codegen) are implemented **manually** — no ANTLR, PLY, Lark, Bison, or any parser/compiler-generation libraries.
 
-**Supported Constructs:** Variables, arithmetic, relational ops, if/else, while, for, functions, print. No pointers, classes, exceptions, file I/O, or interactive input.
+**Supported Constructs:** Variables, 1D arrays, interactive standard input, arithmetic, relational ops, if/else, while, for, functions, print. No pointers, classes, exceptions, or file I/O.
 
 **Architecture:** Classic Frontend → Middle-End → Backend pipeline:
 ```
