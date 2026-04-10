@@ -1,0 +1,110 @@
+Logic and Connectivity (Phase by Phase)
+=======================================
+
+Entrypoints
+-----------
+- main.py: parses CLI args; loads source text; instantiates CompilerPipeline with source/target/lang and verbose flag; calls compile(); prints phase status and validation summary.
+- api/app.py: Flask endpoint /api/compile reads JSON (source_code, source_lang, target_lang, test_input, validate); writes temp source under artifacts; clears stale artifacts; invokes CompilerPipeline; returns phases + artifacts JSON; serves frontend static files.
+
+Pipeline Orchestration (compiler/pipeline.py)
+--------------------------------------------
+- PHASE_ORDER defines sequence. compile():
+  1) Preprocess -> cleaned string saved.
+  2) Lex -> tokens list saved.
+  3) Parse -> AST saved.
+  4) Semantic -> SymbolTable saved.
+  5) IR gen -> TAC list saved.
+  6) Optimize -> before/after TAC saved; stats logged.
+  7) Codegen -> target source saved with proper extension.
+  8) Validation (if requested) -> run-and-compare report saved.
+- On any CompilerError: saves error artifact, marks failed phase, skips remaining.
+- _save_artifact writes JSON or text into artifacts/<phase>/.
+
+Phase 1: Preprocessor (compiler/preprocessor.py)
+-----------------------------------------------
+- Removes comments: C/JS use manual state machine for // and /* */ while preserving newlines; Python uses '#' stripping but keeps strings intact (handles triple quotes).
+- Validates #include syntax (C/C++); replaces valid includes with blank lines to preserve line numbers; raises PreprocessorError on malformed directives.
+- Trims trailing whitespace, keeps blank lines to maintain line numbers for error reporting.
+
+Phase 2: Lexer (compiler/lexer.py)
+---------------------------------
+- Manual scanner; iterates characters.
+- Skips whitespace/newlines (except Python indentation).
+- Recognizes strings (handles escapes), numbers (int/float), identifiers/keywords (per-language keyword sets), operators (1/2/3-char), symbols.
+- Python-specific path: splits by lines, computes INDENT/DEDENT stack, emits NEWLINE tokens; handles simple f-strings by treating them as strings.
+- Emits Token objects with type/value/line/column; appends EOF token; raises LexerError on bad char.
+
+Phase 3: Parser (compiler/parser.py)
+-----------------------------------
+- Recursive-descent LL(1) functions per grammar rule.
+- Builds language-neutral AST classes (Program, FunctionDecl, VarDecl, Assignment, Binary/UnaryExpr, Literal, Identifier, IfStatement, WhileLoop, ForLoop, PrintStatement, InputExpr, ArrayDecl/ArrayAccess, FunctionCall, ReturnStatement).
+- Consumes tokens with lookahead; throws ParserError with line/col on mismatch.
+- Produces structured AST used by later phases.
+
+Phase 4: Semantic Analyzer (compiler/semantic.py)
+-------------------------------------------------
+- Maintains scoped SymbolTable (stack of dicts with scope names).
+- On declarations: checks redeclaration in same scope; records type/kind/line/column; tracks functions and param counts.
+- On uses: lookup must exist in current or outer scopes; marks is_used.
+- Performs lightweight type checks and language constraints (numeric limits, simple compat).
+- Raises SemanticError on undeclared use, redeclare, or incompatible operations; exports symbol_table.json (includes all symbols).
+
+Phase 5: IR Generator (compiler/ir_generator.py)
+-----------------------------------------------
+- Traverses AST; emits linear Three-Address Code (TAC) via _emit(op, dest, arg1, arg2).
+- Generates temporaries t1.. and labels L1.. for control flow.
+- Handles:
+  - VarDecl -> assign initializer if present.
+  - Assignment -> assign op.
+  - Binary/Unary expressions -> temps for subexpressions.
+  - If/While/For -> labels + jz/jmp blocks.
+  - Print/Input -> print/input ops.
+  - Arrays -> alloc_array, array_store/array_load.
+  - Functions -> label with param list, end_func, implicit return.
+- Raises IRError on unknown node types.
+
+Phase 6: Optimizer (compiler/optimizer.py)
+-----------------------------------------
+- Works on TAC list; deep-copies before modifying.
+- Iteratively runs passes until no change or max iterations:
+  1) constant_folding: evaluate ops with two literals (add/sub/mul/div/mod and relations) -> replace with literal.
+  2) constant_propagation: track known constants until control-flow ops; substitute into later uses.
+  3) algebraic_simplification: reduce x+0, x*1, x*0, double negatives, etc.
+  4) dead_code_elimination: remove assignments whose dest is never read (except side-effecting ops).
+- Records counts per pass; writes ir_before/ir_after JSON.
+
+Phase 7: Code Generator (compiler/codegen.py)
+--------------------------------------------
+- Reads optimized TAC; maps ops to target-language syntax tables (_OP_SYMBOLS, language variants).
+- Builds inline table: single-use temporaries are inlined to simplify output.
+- Emits code constructs:
+  - Variable declarations/assignments.
+  - Expressions with proper operators per language (e.g., JS ===, Python and/or, integer division adjustment).
+  - Control flow: labels/jmp/jz into while/if/else blocks.
+  - Functions: emits definitions with params; ensures return.
+  - Arrays: translates alloc/load/store per language syntax.
+  - I/O: print/input mapped to printf/scanf, cout/cin, print/input, console.log/prompt equivalents.
+- Writes output.<ext> in artifacts/codegen/.
+
+Phase 8: Validator (compiler/validator.py)
+-----------------------------------------
+- Creates temp file with generated code.
+- run_code(): dispatch per lang (python/node/gcc/g++), feeds stdin if provided, captures stdout.
+- validate(): runs source and target, compares outputs; if mismatch, does token-wise comparison to ignore whitespace; writes validation_report.json; cleans temp file.
+
+Shared/Error Handling (compiler/errors.py)
+-----------------------------------------
+- Defines CompilerError with phase/type/message/line/column; subclasses per phase; can save error_report.json under artifacts/errors/ with context; pipeline converts first failure into failed + skipped phases.
+
+Frontend Logic (frontend/script.js)
+-----------------------------------
+- Calls API_URL on Compile; sends source/lang choices/test_input/validate.
+- Renders phase timeline; marks success/failed per response.
+- Maps step IDs to artifact keys; switches viewer to show cleaned source, tokens, AST, symbols, IR, optimized IR, generated code, or validation report.
+- Avoids rebuilding artifacts on stale runs by relying on API cleanup step.
+
+Connectivity Summary
+--------------------
+- main.py / api/app.py -> CompilerPipeline.compile()
+- Pipeline sequentially invokes phase classes; each phase produces artifacts used by the next (cleaned text -> tokens -> AST -> symbols -> IR -> optimized IR -> target code -> validation output).
+- Frontend consumes artifacts exposed by API; Validator depends on system toolchains for execution.

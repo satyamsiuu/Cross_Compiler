@@ -1,0 +1,94 @@
+Cross Compiler Flow - 60-Minute Newbie Guide
+============================================
+
+What this project is
+--------------------
+- An educational source-to-source compiler that reads C / C++ / Python / JavaScript and emits equivalent code in any of those four languages.
+- Built manually (no parser/lexer generators) to illustrate every compiler phase and to leave visible artifacts after each step.
+
+High-level data flow
+--------------------
+1) Entry point (`main.py`) or the web API (`api/app.py`) receives the source code and chosen source/target languages.
+2) The `CompilerPipeline` (compiler/pipeline.py) calls each phase in order, saving results under `artifacts/`.
+3) The frontend (`frontend/index.html` + `script.js`) hits `http://127.0.0.1:5000/api/compile`, then displays those artifacts (tokens, AST, IR, optimized IR, generated code, validation result).
+4) Optional validation re-runs the original program and the generated program, compares outputs, and reports pass/fail.
+
+Key files and their roles
+-------------------------
+- main.py - CLI wrapper; parses flags and kicks off the pipeline.
+- api/app.py - Flask API + static file host for the UI; wraps the same pipeline and reloads artifacts for the browser.
+- compiler/preprocessor.py - Strips comments, validates/removes #include, normalizes whitespace.
+- compiler/lexer.py - Manual lexer; emits Token objects; handles Python INDENT/DEDENT; f-strings simplified.
+- compiler/parser.py - Recursive-descent LL(1) parser; builds a language-neutral AST (Program, FunctionDecl, VarDecl, If, While, For, Call, Array, etc.).
+- compiler/semantic.py - Walks AST; manages scoped SymbolTable; checks declaration-before-use, redeclaration, simple type rules, language limits.
+- compiler/ir_generator.py - Converts AST to Three-Address-Code (TAC) instructions (`op`, `dest`, `arg1`, `arg2`), creates temps t1, t2... and labels L1, L2....
+- compiler/optimizer.py - Runs constant folding, constant propagation, algebraic simplification, dead-code elimination; tracks stats.
+- compiler/codegen.py - Turns optimized TAC into target-language source; handles expr inlining, arrays, input/print, control flow.
+- compiler/validator.py - (optional) Executes source and target programs (python/node/gcc/g++), compares outputs (token-insensitive fallback).
+- compiler/errors.py - Base `CompilerError` types per phase; save error artifacts to `artifacts/errors/`.
+- frontend/index.html, styles.css, script.js - Single-page dashboard that calls the API and shows every artifact step.
+- samples/*.c|cpp|py|js - Small programs you can translate/validate.
+- artifacts/** - Auto-written outputs per phase (cleaned_source.txt, tokens.json, ast.json, symbol_table.json, ir.json, ir_before/after.json, output.<ext>, validation_report.json, errors/error_report.json).
+
+How phases connect (pipeline order)
+-----------------------------------
+1) Preprocessing → cleaned text (`artifacts/preprocess/cleaned_source.txt`).
+2) Lexical Analysis → token list (`artifacts/lexer/tokens.json`).
+3) Syntax Analysis → AST (`artifacts/parser/ast.json`).
+4) Semantic Analysis → symbol table (`artifacts/semantic/symbol_table.json`).
+5) IR Generation → TAC list (`artifacts/ir/ir.json`).
+6) Optimization → before/after TAC (`artifacts/optimizer/ir_before.json`, `ir_after.json`).
+7) Code Generation → target source (`artifacts/codegen/output.c|cpp|py|js`).
+8) Validation (optional) → compares runtime outputs (`artifacts/validation/validation_report.json`).
+Each phase stops the pipeline on error; later phases are marked skipped.
+
+Running the project (input → output)
+------------------------------------
+- CLI path (fastest):
+  python main.py --source samples/hello.c --from c --to python --validate
+  Outputs land in `artifacts/` and a phase summary prints to the console.
+- Web UI path:
+  1) Start API: python api/app.py
+  2) Open http://127.0.0.1:5000 in a browser.
+  3) Paste code, pick source/target languages, optional test input, click Compile.
+  4) Click steps in the timeline to view tokens/AST/IR/optimized IR/output.
+- Inputs: source file text (plus optional stdin text for interactive programs).
+- Outputs: generated target code plus every intermediate artifact; validation shows PASS/FAIL with both outputs.
+
+Compiler design concepts demonstrated
+-------------------------------------
+- Preprocessing: comment stripping, include validation while preserving line numbers.
+- Lexical analysis: manual DFA-style scanner; distinguishes keywords/identifiers/numbers/strings/operators; Python INDENT/DEDENT handling.
+- Parsing: recursive-descent LL(1) grammar; builds an explicit AST; supports if/else, while, simple for, functions, arrays, input/print, unary/binary ops.
+- Semantic checks: scoped symbol table; declaration-before-use; redeclaration errors; simple type compatibility; per-language numeric limits; function arity tracking.
+- Intermediate Representation: Three-Address Code (linear TAC) with temps and labels; separates control flow (`jmp`, `jz`) from expressions.
+- Optimization passes:
+  - constant folding (evaluate literals now),
+  - constant propagation (reuse known constants),
+  - algebraic simplification (x+0, x*1, etc.),
+  - dead code elimination (remove unused assignments).
+- Code generation: pretty-prints TAC into C/C++/Python/JS syntax; inlines single-use temps; maps ops per language (`==` vs `===`, `&&` vs `and`, integer vs floor division).
+- Validation: black-box differential testing - run both programs, compare outputs token-wise to ignore minor formatting differences; supports interactive stdin when provided.
+
+Understanding the flow in under an hour (suggested sequence)
+-----------------------------------------------------------
+0-10 min: Skim `readme.md` and this file; run the sample CLI command once and open `artifacts/` to see files appear.
+10-25 min: Open `compiler/pipeline.py` to see the call order; peek at `tokens.json`, `ast.json`, `ir.json` from your run.
+25-40 min: Read `optimizer.py` to see the four passes; then open `codegen.py` to see how TAC maps to each language.
+40-50 min: Try translating `samples/hello.cpp` to `javascript`; inspect `output.js` and validation report.
+50-60 min: Explore the UI (`python api/app.py`), compile, and click through artifacts to reinforce each phase visually.
+
+Interconnections (who calls whom)
+---------------------------------
+- main.py / api/app.py → CompilerPipeline.compile()
+- CompilerPipeline → Preprocessor → Lexer → Parser → SemanticAnalyzer → IRGenerator → IROptimizer → CodeGenerator → (Validator)
+- Frontend script.js → API `/api/compile` → pipeline → artifacts → frontend displays artifacts.
+- Validator → system toolchains (python/node/gcc/g++) to execute both versions for comparison.
+
+Quick mental model
+------------------
+Source text → (clean) → tokens → AST → symbol table → TAC → optimized TAC → target source → (optional run) → validation verdict.
+
+If you forget everything else
+-----------------------------
+Run the CLI command above, open `artifacts/` in a file explorer, and read files in numerical phase order; each file is a snapshot of that compiler stage.

@@ -1,0 +1,82 @@
+Codebase Explanation (File-by-File, Phase Order)
+================================================
+
+Top-Level Entrypoints
+---------------------
+- main.py
+  CLI driver; parses --source/--from/--to/--validate/--verbose and invokes CompilerPipeline.compile(); prints phase status and validation summary.
+- api/app.py
+  Flask API and static host for the UI; writes incoming code to artifacts/temp_source.<ext>, clears stale artifacts, runs CompilerPipeline, returns JSON with phases + artifacts; serves frontend/index.html.
+
+Compiler Core (compiler/)
+-------------------------
+- pipeline.py
+  Orchestrates phases in order; creates artifacts subfolders; saves each phase output; halts on errors; optionally runs validation; maps target language to output extension.
+- errors.py
+  Base CompilerError plus phase-specific subclasses; carries phase/type/message/line/column and can dump error reports to artifacts/errors/.
+
+Phase 1: Preprocessing
+- preprocessor.py
+  Removes comments; validates/strips #include in C/C++; normalizes trailing whitespace while keeping line numbers; raises PreprocessorError on malformed includes.
+
+Phase 2: Lexical Analysis
+- lexer.py
+  Manual tokenizer; language-specific keywords; handles operators, symbols, strings, numbers, identifiers; Python branch emits INDENT/DEDENT/NEWLINE; produces Token objects with line/column; raises LexerError.
+
+Phase 3: Syntax Analysis (Parsing)
+- parser.py
+  Recursive-descent LL(1) parser; builds language-neutral AST nodes (Program, FunctionDecl, VarDecl, If, While, For, BinaryExpr, UnaryExpr, Literal, Identifier, Print, Input, Array constructs, FunctionCall, Return, etc.); raises ParserError on grammar violations.
+
+Phase 4: Semantic Analysis
+- semantic.py
+  Walks AST with scoped SymbolTable; checks declaration-before-use, no same-scope redeclare, simple type compatibility, language numeric limits; tracks functions/params; raises SemanticError; writes symbol_table.json.
+
+Phase 5: IR Generation
+- ir_generator.py
+  Converts AST to Three-Address Code (TAC) instructions (op, dest, arg1, arg2); creates temporaries t1.. and labels L1..; covers control flow (jmp/jz), arrays, input, calls; raises IRError; writes ir.json.
+
+Phase 6: Optimization
+- optimizer.py
+  Runs iterative passes: constant folding, constant propagation, algebraic simplification, dead code elimination; records stats; writes ir_before.json and ir_after.json.
+
+Phase 7: Code Generation
+- codegen.py
+  Translates optimized TAC to target source (C/C++/Python/JS); handles operator symbols per language, inlines single-use temps, formats arrays, conditionals, loops, input/print, returns; writes artifacts/codegen/output.<ext>.
+
+Phase 8: Validation (optional)
+- validator.py
+  Executes original source and generated target (python/node/gcc/g++); supports stdin for interactive programs; compares outputs with token-insensitive fallback; writes validation_report.json; raises ValidationError on exec issues.
+
+Frontend (frontend/)
+--------------------
+- index.html
+  Single-page UI skeleton; includes controls for languages, validation, input; sections to show timeline and artifacts.
+- styles.css
+  Visual styling for the dashboard and timeline.
+- script.js
+  Calls API /api/compile; updates phase timeline; switches artifact viewer (preprocessed, tokens, AST, symbols, IR, optimized IR, output code, validation report).
+
+Samples and Tests
+-----------------
+- samples/* (hello.*, reverse_array.cpp)
+  Ready-made programs to translate/validate.
+- test*.py, test_scanf.c, test_fib.c.out, etc.
+  Local scratch/tests and captured outputs for development checks.
+
+Artifacts (generated outputs)
+-----------------------------
+- artifacts/preprocess/cleaned_source.txt        output of Phase 1
+- artifacts/lexer/tokens.json                    output of Phase 2
+- artifacts/parser/ast.json                      output of Phase 3
+- artifacts/semantic/symbol_table.json           output of Phase 4
+- artifacts/ir/ir.json                           output of Phase 5
+- artifacts/optimizer/ir_before.json, ir_after.json output of Phase 6
+- artifacts/codegen/output.c|cpp|py|js           output of Phase 7
+- artifacts/validation/validation_report.json    output of Phase 8
+- artifacts/errors/error_report.json             written on first failing phase
+
+How generation flows (per run)
+------------------------------
+main.py or api/app.py -> pipeline.compile():
+  preprocess -> lexer -> parser -> semantic -> ir_generation -> optimization -> code_generation -> (validation)
+Each step writes its artifact file(s); on error, later steps are skipped and an error report is saved.
