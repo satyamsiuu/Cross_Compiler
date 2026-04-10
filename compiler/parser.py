@@ -445,6 +445,10 @@ class Parser:
         if tok.type == TokenType.KEYWORD and tok.value == "printf":
             return self._parse_c_printf()
 
+        # Scanf (C)
+        if tok.type == TokenType.KEYWORD and tok.value == "scanf":
+            return self._parse_c_scanf()
+
         # Cout (C++)
         if tok.type == TokenType.KEYWORD and tok.value == "cout":
             return self._parse_cpp_cout()
@@ -658,6 +662,38 @@ class Parser:
         self.expect(TokenType.SYMBOL, ";")
 
         return PrintStatement(args, format_string=fmt_str, line=printf_tok.line)
+
+    def _parse_c_scanf(self):
+        """Parse: scanf( fmt, &var1, &var2, ... ) ;
+        
+        Strips the format string and address-of (&) operators to produce
+        an InputExpr with the target variable identifiers.
+        """
+        scanf_tok = self.advance()  # skip 'scanf'
+        self.expect(TokenType.SYMBOL, "(")
+
+        # First argument is the format string — consume and discard it
+        self.expect(TokenType.STRING)
+
+        targets = []
+        while self.match(TokenType.SYMBOL, ","):
+            # Consume the '&' address-of operator if present (optional for flexibility)
+            has_ampersand = self.match(TokenType.OPERATOR, "&")
+
+            # Check for array access: &arr[i] or arr[i]
+            name_tok = self.expect(TokenType.IDENTIFIER)
+            if self.peek().type == TokenType.SYMBOL and self.peek().value == "[":
+                self.advance()  # skip '['
+                index = self._parse_expression()
+                self.expect(TokenType.SYMBOL, "]")
+                targets.append(ArrayAccess(name_tok.value, index, line=name_tok.line))
+            else:
+                targets.append(Identifier(name_tok.value, line=name_tok.line))
+
+        self.expect(TokenType.SYMBOL, ")")
+        self.expect(TokenType.SYMBOL, ";")
+
+        return InputExpr(targets, line=scanf_tok.line)
 
     def _parse_cpp_cout(self):
         """Parse: cout << expr << expr << endl ;"""

@@ -19,21 +19,11 @@
           "args": []
         },
         {
-          "type": "FunctionCall",
-          "name": "scanf",
-          "args": [
+          "type": "InputExpr",
+          "targets": [
             {
-              "type": "Literal",
-              "value": "\"%d\"",
-              "lit_type": "string"
-            },
-            {
-              "type": "UnaryExpr",
-              "op": "&",
-              "operand": {
-                "type": "Identifier",
-                "name": "num"
-              }
+              "type": "Identifier",
+              "name": "num"
             }
           ]
         },

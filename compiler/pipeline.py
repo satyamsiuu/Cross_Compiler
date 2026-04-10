@@ -80,7 +80,7 @@ class CompilerPipeline:
             cleaned = preprocessor.process(source_code)
             self._save_artifact("preprocess", "cleaned_source.txt", cleaned)
             result["phases"]["preprocessing"] = "success"
-            self._log("  ✔ Preprocessing done.")
+            self._log("  [OK] Preprocessing done.")
 
             # ── Phase 2: Lexical Analysis ───────────────────────────────
             self._log("Phase 2: Lexical Analysis...")
@@ -89,7 +89,7 @@ class CompilerPipeline:
             self._save_artifact("lexer", "tokens.json",
                                 [t.to_dict() for t in tokens])
             result["phases"]["lexical_analysis"] = "success"
-            self._log(f"  ✔ Lexer produced {len(tokens)} tokens.")
+            self._log(f"  [OK] Lexer produced {len(tokens)} tokens.")
 
             # ── Phase 3: Syntax Analysis (Parser) ──────────────────────
             self._log("Phase 3: Syntax Analysis...")
@@ -97,7 +97,7 @@ class CompilerPipeline:
             ast = parser.parse(tokens)
             self._save_artifact("parser", "ast.json", ast.to_dict())
             result["phases"]["syntax_analysis"] = "success"
-            self._log("  ✔ Parser produced AST.")
+            self._log("  [OK] Parser produced AST.")
 
             # ── Phase 4: Semantic Analysis ─────────────────────────────
             self._log("Phase 4: Semantic Analysis...")
@@ -106,7 +106,7 @@ class CompilerPipeline:
             self._save_artifact("semantic", "symbol_table.json",
                                 symbol_table.to_dict())
             result["phases"]["semantic_analysis"] = "success"
-            self._log(f"  ✔ Semantic analysis passed. {symbol_table.to_dict()['total_symbols']} symbols found.")
+            self._log(f"  [OK] Semantic analysis passed. {symbol_table.to_dict()['total_symbols']} symbols found.")
 
             # ── Phase 5: IR Generation ─────────────────────────────────
             self._log("Phase 5: IR Generation...")
@@ -114,7 +114,7 @@ class CompilerPipeline:
             ir_instructions = ir_gen.generate(ast)
             self._save_artifact("ir", "ir.json", ir_instructions)
             result["phases"]["ir_generation"] = "success"
-            self._log(f"  ✔ IR generation passed. {len(ir_instructions)} instructions created.")
+            self._log(f"  [OK] IR generation passed. {len(ir_instructions)} instructions created.")
 
             # ── Phase 6: IR Optimization ───────────────────────────────
             self._log("Phase 6: IR Optimization...")
@@ -125,7 +125,7 @@ class CompilerPipeline:
             result["phases"]["optimization"] = "success"
             before_n = len(ir_instructions)
             after_n = len(optimized_ir)
-            self._log(f"  ✔ Optimization passed. {before_n} → {after_n} instructions.")
+            self._log(f"  [OK] Optimization passed. {before_n} -> {after_n} instructions.")
             if optimizer.stats:
                 for opt_name, count in optimizer.stats.items():
                     if count > 0:
@@ -140,7 +140,7 @@ class CompilerPipeline:
             out_path = self._save_artifact("codegen", out_filename, generated_code)
             result["phases"]["code_generation"] = "success"
             result["output_path"] = out_path
-            self._log(f"  ✔ Code generation passed. Output: {out_filename}")
+            self._log(f"  [OK] Code generation passed. Output: {out_filename}")
             # ── Phase 8: Validation ──────────────────────────────
             if validate:
                 self._log("Phase 8: Validation...")
@@ -162,10 +162,10 @@ class CompilerPipeline:
 
                 if validation_result.get("passed", False):
                     result["phases"]["validation"] = "success"
-                    self._log("  ✔ Validation passed.")
+                    self._log("  [OK] Validation passed.")
                 else:
                     result["phases"]["validation"] = "failed"
-                    self._log("  ❌ Validation failed (Outputs mismatched via evaluation).")
+                    self._log("  [FAIL] Validation failed (Outputs mismatched via evaluation).")
 
                 result["validation"] = validation_result
             # ── Remaining phases will be added in future checkpoints ────

@@ -10,23 +10,8 @@
     "arg1": 0
   },
   {
-    "op": "param",
-    "arg1": "\"%d\""
-  },
-  {
-    "op": "ref",
-    "dest": "t1",
-    "arg1": "num"
-  },
-  {
-    "op": "param",
-    "arg1": "t1"
-  },
-  {
-    "op": "call",
-    "dest": "t2",
-    "arg1": "scanf",
-    "arg2": 2
+    "op": "input",
+    "dest": "num"
   },
   {
     "op": "param",
@@ -48,14 +33,14 @@
   },
   {
     "op": "lte",
-    "dest": "t3",
+    "dest": "t1",
     "arg1": "i",
     "arg2": "10"
   },
   {
     "op": "jz",
     "dest": "L2",
-    "arg1": "t3"
+    "arg1": "t1"
   },
   {
     "op": "param",
@@ -67,13 +52,13 @@
   },
   {
     "op": "mul",
-    "dest": "t4",
+    "dest": "t2",
     "arg1": "num",
     "arg2": "i"
   },
   {
     "op": "param",
-    "arg1": "t4"
+    "arg1": "t2"
   },
   {
     "op": "print",
@@ -82,14 +67,14 @@
   },
   {
     "op": "add",
-    "dest": "t5",
+    "dest": "t3",
     "arg1": "i",
     "arg2": "1"
   },
   {
     "op": "assign",
     "dest": "i",
-    "arg1": "t5"
+    "arg1": "t3"
   },
   {
     "op": "jmp",

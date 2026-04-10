@@ -53,26 +53,26 @@ Examples:
 
         print("\n=== Compilation Summary ===")
         for phase, status in result["phases"].items():
-            icon = "✔" if status == "success" else "❌" if status == "failed" else "⏭"
+            icon = "[OK]" if status == "success" else "[FAIL]" if status == "failed" else "[SKIP]"
             print(f"  {icon} {phase}")
 
         print("\nArtifacts saved to: artifacts/")
         if args.validate and result.get("validation"):
             print("\n=== Validation Result ===")
             if result["validation"]["passed"]:
-                print("  ✅ Outputs match")
+                print("  [PASS] Outputs match")
             else:
-                print("  ❌ Outputs do NOT match")
+                print("  [FAIL] Outputs do NOT match")
         print("Compilation successful (implemented phases).")
 
     except CompilerError as e:
-        print(f"\n❌ Compilation failed at phase: {e.phase}")
+        print(f"\n[FAIL] Compilation failed at phase: {e.phase}")
         print(f"   Error: {e.message}")
         if e.line:
             print(f"   Location: line {e.line}, column {e.column}")
         sys.exit(1)
     except Exception as e:
-        print(f"\n❌ Unexpected error: {e}")
+        print(f"\n[ERROR] Unexpected error: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

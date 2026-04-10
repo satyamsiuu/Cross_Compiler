@@ -45,7 +45,7 @@ class Token:
 KEYWORDS = {
     "c": {
         "int", "float", "double", "char", "void", "return",
-        "if", "else", "while", "for", "printf",
+        "if", "else", "while", "for", "printf", "scanf",
     },
     "cpp": {
         "int", "float", "double", "char", "void", "return",

@@ -1,7 +1,7 @@
 {
   "phase": "Syntax Analysis",
   "error_type": "ParserError",
-  "message": "Unexpected token in expression: '&' (OPERATOR)",
-  "line": 8,
-  "column": 17
+  "message": "Expected ';' but got '}'",
+  "line": 11,
+  "column": 5
 }
