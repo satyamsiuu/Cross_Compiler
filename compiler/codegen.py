@@ -172,7 +172,7 @@ class CodeGenerator:
                 fmt = instr.get("dest")
                 blocks.append({
                     "type": "print",
-                    "args": list(param_stack),
+                    "args": [self._resolve(p, inline) for p in param_stack],
                     "format_string": fmt,
                 })
                 param_stack.clear()
@@ -257,9 +257,11 @@ class CodeGenerator:
                 continue
 
             if op == "return":
+                val = instr.get("arg1")
+                resolved_val = self._resolve(str(val), inline) if val is not None else None
                 blocks.append({
                     "type": "return",
-                    "value": str(instr.get("arg1", "")) if instr.get("arg1") is not None else None,
+                    "value": resolved_val,
                 })
                 i += 1
                 continue
@@ -341,12 +343,18 @@ class CodeGenerator:
                 if not label_name.startswith("L"):
                     func_end = self._find_func_end(instrs, i + 1, end)
                     body_blocks = self._parse_block(instrs, i + 1, func_end, inline, lang)
+                    
+                    params = instr.get("arg1") or []
+                    if isinstance(params, str):
+                        params = [params]
+
                     blocks.append({
                         "type": "func_decl",
                         "name": label_name,
+                        "params": params,
                         "body": body_blocks,
                     })
-                    i = func_end
+                    i = func_end + 1
                     continue
 
                 i += 1
@@ -422,16 +430,10 @@ class CodeGenerator:
         return None
 
     def _find_func_end(self, instrs, start, end) -> int:
-        last_return = end
         for j in range(start, end):
-            if instrs[j].get("op") == "return":
-                last_return = j + 1
-                break
-            if (instrs[j].get("op") == "label" and
-                    not instrs[j].get("dest", "").startswith("L")):
-                last_return = j
-                break
-        return last_return
+            if instrs[j].get("op") == "end_func":
+                return j
+        return end
 
     # ═══════════════════════════════════════════════════════════════════════
     #  C Code Generator
@@ -444,27 +446,27 @@ class CodeGenerator:
 
         has_main = any(b.get("type") == "func_decl" and b.get("name") == "main" for b in blocks)
 
-        if has_main:
-            for block in blocks:
-                if block["type"] == "func_decl" and block["name"] == "main":
-                    lines.append("int main() {")
-                    # Only declare user variables, not inlined temps
-                    user_vars = sorted(v for v in variables if not self._is_temp(v))
-                    if user_vars:
-                        lines.append(f'    int {", ".join(user_vars)};')
-                        lines.append('')
-                    self._emit_c_blocks(block["body"], lines, indent=1)
-                    lines.append("}")
-        else:
-            lines.append("int main() {")
-            user_vars = sorted(v for v in variables if not self._is_temp(v))
-            if user_vars:
-                lines.append(f'    int {", ".join(user_vars)};')
-                lines.append('')
-            self._emit_c_blocks(blocks, lines, indent=1)
+        for block in blocks:
+            if block.get("type") == "func_decl" and block.get("name") != "main":
+                self._emit_c_blocks([block], lines, indent=0)
+
+        lines.append("int main() {")
+        user_vars = sorted(v for v in variables if not self._is_temp(v))
+        if user_vars:
+            lines.append(f'    int {", ".join(user_vars)};')
             lines.append('')
-            lines.append('    return 0;')
-            lines.append("}")
+            
+        if has_main:
+            main_block = next(b for b in blocks if b.get("type") == "func_decl" and b.get("name") == "main")
+            self._emit_c_blocks(main_block["body"], lines, indent=1)
+        else:
+            top_level = [b for b in blocks if b.get("type") != "func_decl"]
+            if top_level:
+                self._emit_c_blocks(top_level, lines, indent=1)
+        
+        lines.append('')
+        lines.append('    return 0;')
+        lines.append("}")
 
         lines.append('')
         return '\n'.join(lines)
@@ -511,15 +513,29 @@ class CodeGenerator:
                     self._emit_c_blocks(block["body"], lines, indent + 1)
                     lines.append(f'{pad}}}')
 
+            elif t == "func_decl":
+                params = []
+                for p in block.get("params", []):
+                    params.append(f"int {p}")
+                params_str = ", ".join(params)
+                lines.append(f'{pad}int {block["name"]}({params_str}) {{')
+                self._emit_c_blocks(block["body"], lines, indent + 1)
+                lines.append(f'{pad}}}')
+
             elif t == "return":
-                if block["value"]:
-                    lines.append(f'{pad}return {block["value"]};')
+                if block.get("value") is not None:
+                    val = self._format_value(block["value"], "c")
+                    lines.append(f'{pad}return {val};')
                 else:
-                    lines.append(f'{pad}return 0;')
+                    lines.append(f'{pad}return;')
 
             elif t == "call":
                 args_str = ", ".join(block.get("args", []))
-                lines.append(f'{pad}{block["func"]}({args_str});')
+                dest = block.get("dest")
+                if dest:
+                    lines.append(f'{pad}{dest} = {block["func"]}({args_str});')
+                else:
+                    lines.append(f'{pad}{block["func"]}({args_str});')
 
             elif t == "alloc_array":
                 lines.append(f'{pad}int {block["dest"]}[{block["size"]}];')
@@ -584,26 +600,27 @@ class CodeGenerator:
 
         has_main = any(b.get("type") == "func_decl" and b.get("name") == "main" for b in blocks)
 
-        if has_main:
-            for block in blocks:
-                if block["type"] == "func_decl" and block["name"] == "main":
-                    lines.append("int main() {")
-                    user_vars = sorted(v for v in variables if not self._is_temp(v))
-                    if user_vars:
-                        lines.append(f'    int {", ".join(user_vars)};')
-                        lines.append('')
-                    self._emit_cpp_blocks(block["body"], lines, indent=1)
-                    lines.append("}")
-        else:
-            lines.append("int main() {")
-            user_vars = sorted(v for v in variables if not self._is_temp(v))
-            if user_vars:
-                lines.append(f'    int {", ".join(user_vars)};')
-                lines.append('')
-            self._emit_cpp_blocks(blocks, lines, indent=1)
+        for block in blocks:
+            if block.get("type") == "func_decl" and block.get("name") != "main":
+                self._emit_cpp_blocks([block], lines, indent=0)
+
+        lines.append("int main() {")
+        user_vars = sorted(v for v in variables if not self._is_temp(v))
+        if user_vars:
+            lines.append(f'    int {", ".join(user_vars)};')
             lines.append('')
-            lines.append('    return 0;')
-            lines.append("}")
+            
+        if has_main:
+            main_block = next(b for b in blocks if b.get("type") == "func_decl" and b.get("name") == "main")
+            self._emit_cpp_blocks(main_block["body"], lines, indent=1)
+        else:
+            top_level = [b for b in blocks if b.get("type") != "func_decl"]
+            if top_level:
+                self._emit_cpp_blocks(top_level, lines, indent=1)
+        
+        lines.append('')
+        lines.append('    return 0;')
+        lines.append("}")
 
         lines.append('')
         return '\n'.join(lines)
@@ -648,15 +665,29 @@ class CodeGenerator:
                     self._emit_cpp_blocks(block["body"], lines, indent + 1)
                     lines.append(f'{pad}}}')
 
+            elif t == "func_decl":
+                params = []
+                for p in block.get("params", []):
+                    params.append(f"int {p}")
+                params_str = ", ".join(params)
+                lines.append(f'{pad}int {block["name"]}({params_str}) {{')
+                self._emit_cpp_blocks(block["body"], lines, indent + 1)
+                lines.append(f'{pad}}}')
+
             elif t == "return":
-                if block["value"]:
-                    lines.append(f'{pad}return {block["value"]};')
+                if block.get("value") is not None:
+                    val = self._format_value(block["value"], "cpp")
+                    lines.append(f'{pad}return {val};')
                 else:
-                    lines.append(f'{pad}return 0;')
+                    lines.append(f'{pad}return;')
 
             elif t == "call":
                 args_str = ", ".join(block.get("args", []))
-                lines.append(f'{pad}{block["func"]}({args_str});')
+                dest = block.get("dest")
+                if dest:
+                    lines.append(f'{pad}{dest} = {block["func"]}({args_str});')
+                else:
+                    lines.append(f'{pad}{block["func"]}({args_str});')
 
             elif t == "alloc_array":
                 lines.append(f'{pad}int {block["dest"]}[{block["size"]}];')
@@ -717,12 +748,18 @@ class CodeGenerator:
         lines = []
 
         has_main = any(b.get("type") == "func_decl" and b.get("name") == "main" for b in blocks)
+        
+        for block in blocks:
+            if block.get("type") == "func_decl" and block.get("name") != "main":
+                self._emit_py_blocks([block], lines, indent=0)
+
         if has_main:
-            for block in blocks:
-                if block["type"] == "func_decl" and block["name"] == "main":
-                    self._emit_py_blocks(block["body"], lines, indent=0)
+            main_block = next(b for b in blocks if b.get("type") == "func_decl" and b.get("name") == "main")
+            self._emit_py_blocks(main_block["body"], lines, indent=0)
         else:
-            self._emit_py_blocks(blocks, lines, indent=0)
+            top_level = [b for b in blocks if b.get("type") != "func_decl"]
+            if top_level:
+                self._emit_py_blocks(top_level, lines, indent=0)
 
         lines.append('')
         return '\n'.join(lines)
@@ -765,13 +802,28 @@ class CodeGenerator:
                     lines.append(f'{pad}while {cond}:')
                     self._emit_py_blocks(block["body"], lines, indent + 1)
 
+            elif t == "func_decl":
+                params = ", ".join(block.get("params", []))
+                lines.append(f'{pad}def {block["name"]}({params}):')
+                if not block.get("body"):
+                    lines.append(f'{pad}    pass')
+                else:
+                    self._emit_py_blocks(block["body"], lines, indent + 1)
+
             elif t == "return":
-                # Skip return in top-level Python (return 0 from C main)
-                pass
+                if block.get("value") is not None:
+                    val = self._format_value(block["value"], "python")
+                    lines.append(f'{pad}return {val}')
+                else:
+                    lines.append(f'{pad}return')
 
             elif t == "call":
                 args_str = ", ".join(block.get("args", []))
-                lines.append(f'{pad}{block["func"]}({args_str})')
+                dest = block.get("dest")
+                if dest:
+                    lines.append(f'{pad}{dest} = {block["func"]}({args_str})')
+                else:
+                    lines.append(f'{pad}{block["func"]}({args_str})')
 
             elif t == "alloc_array":
                 lines.append(f'{pad}{block["dest"]} = [0] * ({block["size"]})')
@@ -792,14 +844,14 @@ class CodeGenerator:
             fmt_str = args[0]
             rest = args[1:]
             if self._is_string_literal(fmt_str):
-                clean = self._clean_string(fmt_str).replace("\\n", "").replace("%d", "").replace("%s", "").strip()
+                clean = self._clean_string(fmt_str).replace("%d", "").replace("%s", "")
                 if rest:
                     args_str = ", ".join(rest)
-                    lines.append(f'{pad}print({args_str})')
+                    lines.append(f'{pad}print("{clean}", {args_str}, end="")')
                 elif clean:
-                    lines.append(f'{pad}print("{clean}")')
+                    lines.append(f'{pad}print("{clean}", end="")')
                 else:
-                    lines.append(f'{pad}print()')
+                    lines.append(f'{pad}print(end="")')
             else:
                 args_str = ", ".join(args)
                 lines.append(f'{pad}print({args_str})')
@@ -812,13 +864,13 @@ class CodeGenerator:
         elif fmt:
             if args:
                 args_str = ", ".join(args)
-                lines.append(f'{pad}print({args_str})')
+                lines.append(f'{pad}print({args_str}, end="")')
             else:
-                clean = self._clean_string(fmt).replace("\\n", "").replace("%d", "").strip()
+                clean = self._clean_string(fmt).replace("%d", "").strip()
                 if clean:
-                    lines.append(f'{pad}print("{clean}")')
+                    lines.append(f'{pad}print("{clean}", end="")')
                 else:
-                    lines.append(f'{pad}print()')
+                    lines.append(f'{pad}print(end="")')
         else:
             if not args:
                 lines.append(f'{pad}print()')
@@ -826,7 +878,7 @@ class CodeGenerator:
                 args_str = ", ".join(
                     self._format_value(a, "python") for a in args
                 )
-                lines.append(f'{pad}print({args_str})')
+                lines.append(f'{pad}print({args_str}, end="")')
 
     # ═══════════════════════════════════════════════════════════════════════
     #  JavaScript Code Generator
@@ -839,12 +891,18 @@ class CodeGenerator:
         declared = set()
 
         has_main = any(b.get("type") == "func_decl" and b.get("name") == "main" for b in blocks)
+        
+        for block in blocks:
+            if block.get("type") == "func_decl" and block.get("name") != "main":
+                self._emit_js_blocks([block], lines, indent=0, declared=declared)
+
         if has_main:
-            for block in blocks:
-                if block["type"] == "func_decl" and block["name"] == "main":
-                    self._emit_js_blocks(block["body"], lines, indent=0, declared=declared)
+            main_block = next(b for b in blocks if b.get("type") == "func_decl" and b.get("name") == "main")
+            self._emit_js_blocks(main_block["body"], lines, indent=0, declared=declared)
         else:
-            self._emit_js_blocks(blocks, lines, indent=0, declared=declared)
+            top_level = [b for b in blocks if b.get("type") != "func_decl"]
+            if top_level:
+                self._emit_js_blocks(top_level, lines, indent=0, declared=declared)
 
         lines.append('')
         return '\n'.join(lines)
@@ -905,8 +963,18 @@ class CodeGenerator:
                     self._emit_js_blocks(block["body"], lines, indent + 1, declared)
                     lines.append(f'{pad}}}')
 
+            elif t == "func_decl":
+                params = ", ".join(block.get("params", []))
+                lines.append(f'{pad}function {block["name"]}({params}) {{')
+                self._emit_js_blocks(block["body"], lines, indent + 1, set())
+                lines.append(f'{pad}}}')
+
             elif t == "return":
-                pass
+                if block.get("value") is not None:
+                    val = self._format_value(block["value"], "javascript")
+                    lines.append(f'{pad}return {val};')
+                else:
+                    lines.append(f'{pad}return;')
 
             elif t == "call":
                 args_str = ", ".join(block.get("args", []))
@@ -946,17 +1014,18 @@ class CodeGenerator:
             fmt_str = args[0]
             rest = args[1:]
             if self._is_string_literal(fmt_str) and rest:
+                clean = self._clean_string(fmt_str).replace("%d", "").replace("%s", "")
                 args_str = ", ".join(rest)
-                lines.append(f'{pad}console.log({args_str});')
+                lines.append(f'{pad}process.stdout.write("{clean}" + {args_str});')
             elif self._is_string_literal(fmt_str):
-                clean = self._clean_string(fmt_str).replace("\\n", "").replace("%d", "").replace("%s", "").strip()
+                clean = self._clean_string(fmt_str).replace("%d", "").replace("%s", "")
                 if clean:
-                    lines.append(f'{pad}console.log("{clean}");')
+                    lines.append(f'{pad}process.stdout.write("{clean}");')
                 else:
-                    lines.append(f'{pad}console.log();')
+                    lines.append(f'{pad}process.stdout.write("");')
             else:
                 args_str = ", ".join(args)
-                lines.append(f'{pad}console.log({args_str});')
+                lines.append(f'{pad}process.stdout.write({args_str});')
         elif source_func == "print" and args:
             # Python print → console.log
             args_str = ", ".join(

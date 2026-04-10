@@ -92,7 +92,14 @@ class IRGenerator:
 
     def _generate_function_decl(self, node: FunctionDecl):
         """Generate IR for a function definition."""
-        self._emit("label", dest=node.name)
+        param_names = []
+        for p in node.params:
+            if isinstance(p, dict):
+                param_names.append(p.get("name", ""))
+            else:
+                param_names.append(p)
+
+        self._emit("label", dest=node.name, arg1=param_names)
         
         # We don't necessarily need an explicit param op for the definition side in simple IR,
         # but we can emit a comment or enter_func op if desired. Let's just use the label.
@@ -103,6 +110,8 @@ class IRGenerator:
         # Ensure functions have an implicit return if they don't explicitly return
         if not self.instructions or self.instructions[-1].get("op") != "return":
             self._emit("return")
+            
+        self._emit("end_func")
 
     def _generate_var_decl(self, node: VarDecl):
         """Generate IR for a variable declaration."""
@@ -248,7 +257,7 @@ class IRGenerator:
             # map op to a clear string
             op_map = {
                 "+": "add", "-": "sub", "*": "mul", "/": "div", "%": "mod",
-                "==": "eq", "!=": "neq", "<": "lt", ">": "gt", "<=": "lte", ">=": "gte",
+                "==": "eq", "!=": "neq", "===": "eq", "!==": "neq", "<": "lt", ">": "gt", "<=": "lte", ">=": "gte",
                 "&&": "and", "||": "or", "and": "and", "or": "or"
             }
             op_str = op_map.get(node.op, node.op)

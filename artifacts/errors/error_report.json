@@ -1,7 +1,7 @@
 {
-  "phase": "Syntax Analysis",
-  "error_type": "ParserError",
-  "message": "Expected ';' but got ','",
-  "line": 20,
-  "column": 17
+  "phase": "Validation",
+  "error_type": "ValidationError",
+  "message": "Command '['gcc', '/tmp/tmp_tc2yf08.c', '-o', '/tmp/tmp_tc2yf08.c.out']' returned non-zero exit status 1.",
+  "line": null,
+  "column": null
 }

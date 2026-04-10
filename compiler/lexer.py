@@ -64,7 +64,8 @@ KEYWORDS = {
     },
 }
 
-# Two-character operators
+# Operators
+THREE_CHAR_OPS = {"===", "!=="}
 TWO_CHAR_OPS = {"==", "!=", "<=", ">=", "&&", "||", "++", "--", "+=", "-=", "*=", "/=", "<<", ">>"}
 ONE_CHAR_OPS = {"+", "-", "*", "/", "%", "=", "<", ">", "!", "&", "|"}
 SYMBOLS = {"(", ")", "{", "}", "[", "]", ",", ";", ":", "."}
@@ -126,6 +127,16 @@ class Lexer:
             if ch.isalpha() or ch == '_':
                 self._read_identifier()
                 continue
+
+            # Three-character operators
+            if self.pos + 2 < len(self.source):
+                three = self.source[self.pos:self.pos + 3]
+                if three in THREE_CHAR_OPS:
+                    self.tokens.append(Token(TokenType.OPERATOR, three, self.line, self.column))
+                    self._advance()
+                    self._advance()
+                    self._advance()
+                    continue
 
             # Two-character operators
             if self.pos + 1 < len(self.source):
@@ -202,6 +213,15 @@ class Lexer:
                 if ch.isalpha() or ch == '_':
                     self._read_identifier()
                     continue
+
+                if self.pos + 2 < len(self.source):
+                    three = self.source[self.pos:self.pos + 3]
+                    if three in THREE_CHAR_OPS:
+                        self.tokens.append(Token(TokenType.OPERATOR, three, self.line, self.column))
+                        self._advance()
+                        self._advance()
+                        self._advance()
+                        continue
 
                 if self.pos + 1 < len(self.source):
                     two = self.source[self.pos:self.pos + 2]

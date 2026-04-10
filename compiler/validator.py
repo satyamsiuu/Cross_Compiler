@@ -3,8 +3,11 @@ import tempfile
 import os
 import json
 
-class ValidationError(Exception):
-    pass
+from compiler.errors import CompilerError
+
+class ValidationError(CompilerError):
+    def __init__(self, message):
+        super().__init__("Validation", "ValidationError", message)
 
 
 class Validator:
@@ -51,7 +54,7 @@ class Validator:
             raise ValidationError(str(e))
 
 
-    def validate(self, source_path, source_lang, generated_code, target_lang, interactive=False):
+    def validate(self, source_path, source_lang, generated_code, target_lang, interactive=False, input_data=None):
         import sys
         ext_map = {"python": ".py", "c": ".c", "cpp": ".cpp", "javascript": ".js"}
         suffix = ext_map.get(target_lang, ".txt")
@@ -61,10 +64,16 @@ class Validator:
 
         test_input = ""
         if interactive:
-            print("\n[validator] Interactive program detected. Please provide test inputs.")
-            print("[validator] (Type your inputs, press Enter, then press Ctrl+D on Unix or Ctrl+Z on Windows to finish):")
-            test_input = sys.stdin.read()
-            print("[validator] Input captured. Proceeding with validation...")
+            if input_data is not None:
+                if str(input_data).strip() == "":
+                    raise ValidationError("This program requires Interactive Input. Please provide test inputs cleanly in the GUI.")
+                test_input = input_data
+                print("[validator] Interactive program detected. Using provided test inputs from API.")
+            else:
+                print("\n[validator] Interactive program detected. Please provide test inputs.")
+                print("[validator] (Type your inputs, press Enter, then press Ctrl+D on Unix or Ctrl+Z on Windows to finish):")
+                test_input = sys.stdin.read()
+                print("[validator] Input captured. Proceeding with validation...")
 
         try:
             source_output = self.run_code(source_path, source_lang, test_input)
@@ -86,9 +95,6 @@ class Validator:
 
             with open("artifacts/validation/validation_report.json", "w") as f:
                 json.dump(result, f, indent=4)
-
-            if not match:
-                raise ValidationError("Outputs do not match")
 
             return result
 

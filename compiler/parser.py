@@ -551,9 +551,12 @@ class Parser:
         else_body = None
         if self.peek().type == TokenType.KEYWORD and self.peek().value == "else":
             self.advance()  # skip 'else'
-            self.expect(TokenType.SYMBOL, "{")
-            else_body = self._parse_c_block()
-            self.expect(TokenType.SYMBOL, "}")
+            if self.peek().type == TokenType.KEYWORD and self.peek().value == "if":
+                else_body = [self._parse_c_if()]
+            else:
+                self.expect(TokenType.SYMBOL, "{")
+                else_body = self._parse_c_block()
+                self.expect(TokenType.SYMBOL, "}")
 
         return IfStatement(cond, then_body, else_body, line=if_tok.line)
 
@@ -1013,9 +1016,12 @@ class Parser:
         else_body = None
         if self.peek().type == TokenType.KEYWORD and self.peek().value == "else":
             self.advance()
-            self.expect(TokenType.SYMBOL, "{")
-            else_body = self._parse_js_block()
-            self.expect(TokenType.SYMBOL, "}")
+            if self.peek().type == TokenType.KEYWORD and self.peek().value == "if":
+                else_body = [self._parse_js_if()]
+            else:
+                self.expect(TokenType.SYMBOL, "{")
+                else_body = self._parse_js_block()
+                self.expect(TokenType.SYMBOL, "}")
 
         return IfStatement(cond, then_body, else_body)
 
@@ -1129,7 +1135,7 @@ class Parser:
 
     def _parse_equality(self):
         left = self._parse_comparison()
-        while self.peek().type == TokenType.OPERATOR and self.peek().value in ("==", "!="):
+        while self.peek().type == TokenType.OPERATOR and self.peek().value in ("==", "!=", "===", "!=="):
             op = self.advance().value
             right = self._parse_comparison()
             left = BinaryExpr(op, left, right)

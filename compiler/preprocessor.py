@@ -49,7 +49,7 @@ class Preprocessor:
         lines = source.split("\n")
         result = []
         include_pattern = re.compile(
-            r'^\s*#\s*include\s+'
+            r'^\s*#\s*include\s*'
             r'(<[a-zA-Z0-9_./]+>|"[a-zA-Z0-9_./]+")'
             r'\s*$'
         )

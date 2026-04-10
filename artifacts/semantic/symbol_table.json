@@ -1,61 +1,40 @@
 {
   "symbols": [
     {
-      "name": "main",
-      "type": "int",
+      "name": "fibonacci",
+      "type": "auto",
       "scope": "global",
       "line": null,
       "column": null,
       "kind": "function",
-      "param_count": 0
+      "param_count": 1
     },
     {
-      "name": "n",
-      "type": "int",
-      "scope": "main",
-      "line": 5,
-      "column": null
-    },
-    {
-      "name": "arr",
-      "type": "int",
-      "scope": "main",
-      "line": 11,
-      "column": null
-    },
-    {
-      "name": "i",
-      "type": "int",
-      "scope": "for",
+      "name": "num",
+      "type": "auto",
+      "scope": "fibonacci",
       "line": null,
       "column": null
     },
     {
-      "name": "left",
+      "name": "num1",
       "type": "int",
-      "scope": "main",
-      "line": 20,
+      "scope": "fibonacci",
+      "line": null,
       "column": null
     },
     {
-      "name": "right",
+      "name": "num2",
       "type": "int",
-      "scope": "main",
-      "line": 20,
-      "column": null
-    },
-    {
-      "name": "temp",
-      "type": "int",
-      "scope": "while",
-      "line": 22,
+      "scope": "fibonacci",
+      "line": null,
       "column": null
     },
     {
       "name": "sum",
-      "type": "int",
-      "scope": "main",
-      "line": 31,
+      "type": "auto",
+      "scope": "fibonacci",
+      "line": null,
       "column": null
     },
     {
@@ -66,5 +45,5 @@
       "column": null
     }
   ],
-  "total_symbols": 9
+  "total_symbols": 6
 }

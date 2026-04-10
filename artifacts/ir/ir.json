@@ -1,258 +1,118 @@
 [
   {
     "op": "label",
-    "dest": "main"
-  },
-  {
-    "op": "param",
-    "arg1": "\"Enter size of array: \""
-  },
-  {
-    "op": "print",
-    "arg1": 1
-  },
-  {
-    "op": "input",
-    "dest": "n"
-  },
-  {
-    "op": "alloc_array",
-    "dest": "arr",
-    "arg1": "n"
-  },
-  {
-    "op": "param",
-    "arg1": "\"Enter \""
-  },
-  {
-    "op": "param",
-    "arg1": "n"
-  },
-  {
-    "op": "param",
-    "arg1": "\" elements: \""
-  },
-  {
-    "op": "print",
-    "arg1": 3
+    "dest": "fibonacci",
+    "arg1": [
+      "num"
+    ]
   },
   {
     "op": "assign",
-    "dest": "i",
+    "dest": "num1",
     "arg1": "0"
   },
   {
-    "op": "label",
-    "dest": "L1"
+    "op": "assign",
+    "dest": "num2",
+    "arg1": "1"
   },
   {
-    "op": "lt",
+    "op": "eq",
     "dest": "t1",
-    "arg1": "i",
-    "arg2": "n"
+    "arg1": "num",
+    "arg2": "1"
   },
   {
     "op": "jz",
-    "dest": "L2",
+    "dest": "L1",
     "arg1": "t1"
   },
   {
-    "op": "input",
-    "dest": "t2"
-  },
-  {
-    "op": "array_store",
-    "dest": "arr",
-    "arg1": "i",
-    "arg2": "t2"
-  },
-  {
-    "op": "add",
-    "dest": "t3",
-    "arg1": "i",
-    "arg2": "1"
-  },
-  {
-    "op": "assign",
-    "dest": "i",
-    "arg1": "t3"
+    "op": "return",
+    "arg1": "num1"
   },
   {
     "op": "jmp",
-    "dest": "L1"
-  },
-  {
-    "op": "label",
     "dest": "L2"
   },
   {
-    "op": "assign",
-    "dest": "left",
-    "arg1": "0"
-  },
-  {
-    "op": "sub",
-    "dest": "t4",
-    "arg1": "n",
-    "arg2": "1"
-  },
-  {
-    "op": "assign",
-    "dest": "right",
-    "arg1": "t4"
-  },
-  {
     "op": "label",
-    "dest": "L3"
+    "dest": "L1"
   },
   {
-    "op": "lt",
-    "dest": "t5",
-    "arg1": "left",
-    "arg2": "right"
+    "op": "eq",
+    "dest": "t2",
+    "arg1": "num",
+    "arg2": "2"
   },
   {
     "op": "jz",
-    "dest": "L4",
-    "arg1": "t5"
+    "dest": "L3",
+    "arg1": "t2"
   },
   {
-    "op": "array_load",
-    "dest": "t6",
-    "arg1": "arr",
-    "arg2": "left"
-  },
-  {
-    "op": "assign",
-    "dest": "temp",
-    "arg1": "t6"
-  },
-  {
-    "op": "array_load",
-    "dest": "t7",
-    "arg1": "arr",
-    "arg2": "right"
-  },
-  {
-    "op": "array_store",
-    "dest": "arr",
-    "arg1": "left",
-    "arg2": "t7"
-  },
-  {
-    "op": "array_store",
-    "dest": "arr",
-    "arg1": "right",
-    "arg2": "temp"
-  },
-  {
-    "op": "add",
-    "dest": "t8",
-    "arg1": "left",
-    "arg2": "1"
-  },
-  {
-    "op": "assign",
-    "dest": "left",
-    "arg1": "t8"
-  },
-  {
-    "op": "sub",
-    "dest": "t9",
-    "arg1": "right",
-    "arg2": "1"
-  },
-  {
-    "op": "assign",
-    "dest": "right",
-    "arg1": "t9"
+    "op": "return",
+    "arg1": "num2"
   },
   {
     "op": "jmp",
-    "dest": "L3"
-  },
-  {
-    "op": "label",
     "dest": "L4"
   },
   {
-    "op": "assign",
-    "dest": "sum",
-    "arg1": "0"
-  },
-  {
-    "op": "param",
-    "arg1": "\"Reversed array: \""
-  },
-  {
-    "op": "print",
-    "arg1": 1
+    "op": "label",
+    "dest": "L3"
   },
   {
     "op": "assign",
     "dest": "i",
-    "arg1": "0"
+    "arg1": "3"
   },
   {
     "op": "label",
     "dest": "L5"
   },
   {
-    "op": "lt",
-    "dest": "t10",
+    "op": "lte",
+    "dest": "t3",
     "arg1": "i",
-    "arg2": "n"
+    "arg2": "num"
   },
   {
     "op": "jz",
     "dest": "L6",
-    "arg1": "t10"
-  },
-  {
-    "op": "array_load",
-    "dest": "t11",
-    "arg1": "arr",
-    "arg2": "i"
-  },
-  {
-    "op": "param",
-    "arg1": "t11"
-  },
-  {
-    "op": "param",
-    "arg1": "\" \""
-  },
-  {
-    "op": "print",
-    "arg1": 2
-  },
-  {
-    "op": "array_load",
-    "dest": "t12",
-    "arg1": "arr",
-    "arg2": "i"
+    "arg1": "t3"
   },
   {
     "op": "add",
-    "dest": "t13",
-    "arg1": "sum",
-    "arg2": "t12"
+    "dest": "t4",
+    "arg1": "num1",
+    "arg2": "num2"
   },
   {
     "op": "assign",
     "dest": "sum",
-    "arg1": "t13"
+    "arg1": "t4"
+  },
+  {
+    "op": "assign",
+    "dest": "num1",
+    "arg1": "num2"
+  },
+  {
+    "op": "assign",
+    "dest": "num2",
+    "arg1": "sum"
   },
   {
     "op": "add",
-    "dest": "t14",
+    "dest": "t5",
     "arg1": "i",
     "arg2": "1"
   },
   {
     "op": "assign",
     "dest": "i",
-    "arg1": "t14"
+    "arg1": "t5"
   },
   {
     "op": "jmp",
@@ -263,23 +123,69 @@
     "dest": "L6"
   },
   {
-    "op": "print",
-    "arg1": 0
-  },
-  {
-    "op": "param",
-    "arg1": "\"Sum of all elements: \""
-  },
-  {
-    "op": "param",
-    "arg1": "sum"
-  },
-  {
-    "op": "print",
-    "arg1": 2
-  },
-  {
     "op": "return",
-    "arg1": "0"
+    "arg1": "num2"
+  },
+  {
+    "op": "label",
+    "dest": "L4"
+  },
+  {
+    "op": "label",
+    "dest": "L2"
+  },
+  {
+    "op": "return"
+  },
+  {
+    "op": "end_func"
+  },
+  {
+    "op": "param",
+    "arg1": "5"
+  },
+  {
+    "op": "call",
+    "dest": "t6",
+    "arg1": "fibonacci",
+    "arg2": 1
+  },
+  {
+    "op": "add",
+    "dest": "t7",
+    "arg1": "\"Fibonacci(5): \"",
+    "arg2": "t6"
+  },
+  {
+    "op": "param",
+    "arg1": "t7"
+  },
+  {
+    "op": "print",
+    "arg1": 1
+  },
+  {
+    "op": "param",
+    "arg1": "8"
+  },
+  {
+    "op": "call",
+    "dest": "t8",
+    "arg1": "fibonacci",
+    "arg2": 1
+  },
+  {
+    "op": "add",
+    "dest": "t9",
+    "arg1": "\"Fibonacci(8): \"",
+    "arg2": "t8"
+  },
+  {
+    "op": "param",
+    "arg1": "t9"
+  },
+  {
+    "op": "print",
+    "arg1": 1
   }
 ]

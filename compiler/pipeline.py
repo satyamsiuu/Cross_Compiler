@@ -65,7 +65,7 @@ class CompilerPipeline:
                 f.write(str(data))
         return path
 
-    def compile(self, source_code: str,source_path: str, validate: bool = False) -> dict:
+    def compile(self, source_code: str,source_path: str, validate: bool = False, input_data: str = None) -> dict:
         """Run the compilation pipeline (only implemented phases)."""
         result = {
             "phases": {},
@@ -154,15 +154,20 @@ class CompilerPipeline:
                     source_lang=self.source_lang,
                     generated_code=generated_code,
                     target_lang=self.target_lang,
-                    interactive=has_input
+                    interactive=has_input,
+                    input_data=input_data
                 )
 
                 self._save_artifact("validation", "validation_report.json", validation_result)
 
-                result["phases"]["validation"] = "success"
-                result["validation"] = validation_result
+                if validation_result.get("passed", False):
+                    result["phases"]["validation"] = "success"
+                    self._log("  ✔ Validation passed.")
+                else:
+                    result["phases"]["validation"] = "failed"
+                    self._log("  ❌ Validation failed (Outputs mismatched via evaluation).")
 
-                self._log("  ✔ Validation passed.")
+                result["validation"] = validation_result
             # ── Remaining phases will be added in future checkpoints ────
             self._log("Pipeline complete (implemented phases only).")
 
@@ -176,6 +181,9 @@ class CompilerPipeline:
                         failed = True
                     else:
                         result["phases"][phase_name] = "skipped"
+            
+            # Map tracking to error dynamically
+            e.phases_state = result["phases"]
             raise
 
         return result

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cross-Compiler Visualization Matrix</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="app-container">
+    <header class="app-header">
+        <h1>Cross-Compiler <span>Matrix</span></h1>
+        <p>A Source-to-Source Educational Platform</p>
+    </header>
+
+    <div class="main-layout">
+        <!-- LEFT PANEL: Editor & Specs -->
+        <section class="left-panel glass-panel">
+            <div class="controls row">
+                <div class="control-group">
+                    <label>Source Language</label>
+                    <select id="source-lang">
+                        <option value="cpp">C++</option>
+                        <option value="c">C</option>
+                        <option value="python">Python</option>
+                        <option value="javascript">JavaScript</option>
+                    </select>
+                </div>
+                <div class="control-group swap-icon">→</div>
+                <div class="control-group">
+                    <label>Target Language</label>
+                    <select id="target-lang">
+                        <option value="python">Python</option>
+                        <option value="javascript">JavaScript</option>
+                        <option value="c">C</option>
+                        <option value="cpp">C++</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="editor-container">
+                <label>Source Code</label>
+                <textarea id="source-code" spellcheck="false" placeholder="Write your code here..."></textarea>
+            </div>
+
+            <div class="interactive-container">
+                <label>Interactive Test Inputs (Validation stream)</label>
+                <textarea id="test-input" spellcheck="false" placeholder="Inputs separated by newlines (e.g. \n5\n10\n)"></textarea>
+            </div>
+
+            <div class="action-row">
+                <label class="checkbox-container">
+                    <input type="checkbox" id="validate-check" checked>
+                    <span class="checkmark"></span>
+                    Run Automatic Validation
+                </label>
+                <button id="compile-btn" class="glow-on-hover">COMPILE</button>
+            </div>
+            
+            <div id="error-box" class="error-box hidden"></div>
+        </section>
+
+        <!-- RIGHT PANEL: Dashboard -->
+        <section class="right-panel">
+            
+            <!-- Timeline Tracking -->
+            <div class="timeline glass-panel">
+                <h3>Compilation Pipeline</h3>
+                <div class="steps-row" id="pipeline-steps">
+                    <div class="step" id="step-preprocessing"><span>1</span> Preprocessing</div>
+                    <div class="step" id="step-lexical_analysis"><span>2</span> Tokenizer</div>
+                    <div class="step" id="step-syntax_analysis"><span>3</span> Parser</div>
+                    <div class="step" id="step-semantic_analysis"><span>4</span> Semantic</div>
+                    <div class="step" id="step-ir_generation"><span>5</span> IR Gen</div>
+                    <div class="step" id="step-optimization"><span>6</span> Optimizer</div>
+                    <div class="step" id="step-code_generation"><span>7</span> CodeGen</div>
+                    <div class="step" id="step-validation"><span>8</span> Validation</div>
+                </div>
+            </div>
+
+            <!-- Visualization Artifacts -->
+            <div class="artifact-visualizer glass-panel">
+                <div class="tabs-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border-glass); padding-bottom: 10px;">
+                    <h4 style="color: var(--primary-cyan); font-weight: 600; text-transform: uppercase; font-size: 0.9rem;" id="viewer-title">Target Output Code</h4>
+                    <span style="font-size: 0.75rem; color: var(--text-muted);">(Click Timeline bubbles above to inspect artifacts)</span>
+                </div>
+                
+                <div class="viewer-container" style="padding: 20px; font-family: 'Fira Code', monospace; font-size: 0.85rem; color: #a6accd; white-space: pre-wrap;">
+                    <div id="artifact-content">Compile a program to view artifacts here...</div>
+                </div>
+            </div>
+
+        </section>
+    </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>

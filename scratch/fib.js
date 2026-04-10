@@ -15,6 +15,4 @@ function fibonacci(num) {
         return num2;
     }
 }
-
 console.log("Fibonacci(5): " + fibonacci(5));
-console.log("Fibonacci(8): " + fibonacci(8));

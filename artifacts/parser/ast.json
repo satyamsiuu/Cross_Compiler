@@ -3,117 +3,19 @@
   "body": [
     {
       "type": "FunctionDecl",
-      "name": "main",
-      "params": [],
-      "return_type": "int",
+      "name": "fibonacci",
+      "params": [
+        {
+          "type": "auto",
+          "name": "num"
+        }
+      ],
+      "return_type": "auto",
       "body": [
         {
           "type": "VarDecl",
-          "var_type": "int",
-          "name": "n",
-          "initializer": null
-        },
-        {
-          "type": "PrintStatement",
-          "format_string": null,
-          "args": [
-            {
-              "type": "Literal",
-              "value": "\"Enter size of array: \"",
-              "lit_type": "string"
-            }
-          ]
-        },
-        {
-          "type": "InputExpr",
-          "targets": [
-            {
-              "type": "Identifier",
-              "name": "n"
-            }
-          ]
-        },
-        {
-          "type": "ArrayDecl",
-          "var_type": "int",
-          "name": "arr",
-          "size": {
-            "type": "Identifier",
-            "name": "n"
-          }
-        },
-        {
-          "type": "PrintStatement",
-          "format_string": null,
-          "args": [
-            {
-              "type": "Literal",
-              "value": "\"Enter \"",
-              "lit_type": "string"
-            },
-            {
-              "type": "Identifier",
-              "name": "n"
-            },
-            {
-              "type": "Literal",
-              "value": "\" elements: \"",
-              "lit_type": "string"
-            }
-          ]
-        },
-        {
-          "type": "ForLoop",
-          "init": {
-            "type": "VarDecl",
-            "var_type": "int",
-            "name": "i",
-            "initializer": {
-              "type": "Literal",
-              "value": "0",
-              "lit_type": "number"
-            }
-          },
-          "condition": {
-            "type": "BinaryExpr",
-            "op": "<",
-            "left": {
-              "type": "Identifier",
-              "name": "i"
-            },
-            "right": {
-              "type": "Identifier",
-              "name": "n"
-            }
-          },
-          "update": {
-            "type": "UnaryExpr",
-            "op": "post_inc",
-            "operand": {
-              "type": "Identifier",
-              "name": "i"
-            }
-          },
-          "body": [
-            {
-              "type": "InputExpr",
-              "targets": [
-                {
-                  "type": "ArrayAccess",
-                  "name": "arr",
-                  "index": {
-                    "type": "Identifier",
-                    "name": "i"
-                  }
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "type": "VarDecl",
-          "var_type": "int",
-          "name": "left",
+          "var_type": "let",
+          "name": "num1",
           "initializer": {
             "type": "Literal",
             "value": "0",
@@ -122,226 +24,198 @@
         },
         {
           "type": "VarDecl",
-          "var_type": "int",
-          "name": "right",
+          "var_type": "let",
+          "name": "num2",
           "initializer": {
+            "type": "Literal",
+            "value": "1",
+            "lit_type": "number"
+          }
+        },
+        {
+          "type": "VarDecl",
+          "var_type": "let",
+          "name": "sum",
+          "initializer": null
+        },
+        {
+          "type": "IfStatement",
+          "condition": {
             "type": "BinaryExpr",
-            "op": "-",
+            "op": "===",
             "left": {
               "type": "Identifier",
-              "name": "n"
+              "name": "num"
             },
             "right": {
               "type": "Literal",
               "value": "1",
               "lit_type": "number"
             }
-          }
-        },
-        {
-          "type": "WhileLoop",
-          "condition": {
-            "type": "BinaryExpr",
-            "op": "<",
-            "left": {
-              "type": "Identifier",
-              "name": "left"
-            },
-            "right": {
-              "type": "Identifier",
-              "name": "right"
-            }
           },
-          "body": [
+          "then_body": [
             {
-              "type": "VarDecl",
-              "var_type": "int",
-              "name": "temp",
-              "initializer": {
-                "type": "ArrayAccess",
-                "name": "arr",
-                "index": {
-                  "type": "Identifier",
-                  "name": "left"
-                }
-              }
-            },
-            {
-              "type": "Assignment",
-              "target": {
-                "type": "ArrayAccess",
-                "name": "arr",
-                "index": {
-                  "type": "Identifier",
-                  "name": "left"
-                }
-              },
-              "value": {
-                "type": "ArrayAccess",
-                "name": "arr",
-                "index": {
-                  "type": "Identifier",
-                  "name": "right"
-                }
-              }
-            },
-            {
-              "type": "Assignment",
-              "target": {
-                "type": "ArrayAccess",
-                "name": "arr",
-                "index": {
-                  "type": "Identifier",
-                  "name": "right"
-                }
-              },
+              "type": "ReturnStatement",
               "value": {
                 "type": "Identifier",
-                "name": "temp"
-              }
-            },
-            {
-              "type": "UnaryExpr",
-              "op": "post_inc",
-              "operand": {
-                "type": "Identifier",
-                "name": "left"
-              }
-            },
-            {
-              "type": "UnaryExpr",
-              "op": "post_dec",
-              "operand": {
-                "type": "Identifier",
-                "name": "right"
+                "name": "num1"
               }
             }
-          ]
-        },
-        {
-          "type": "VarDecl",
-          "var_type": "int",
-          "name": "sum",
-          "initializer": {
-            "type": "Literal",
-            "value": "0",
-            "lit_type": "number"
-          }
-        },
-        {
-          "type": "PrintStatement",
-          "format_string": null,
-          "args": [
+          ],
+          "else_body": [
             {
-              "type": "Literal",
-              "value": "\"Reversed array: \"",
-              "lit_type": "string"
-            }
-          ]
-        },
-        {
-          "type": "ForLoop",
-          "init": {
-            "type": "VarDecl",
-            "var_type": "int",
-            "name": "i",
-            "initializer": {
-              "type": "Literal",
-              "value": "0",
-              "lit_type": "number"
-            }
-          },
-          "condition": {
-            "type": "BinaryExpr",
-            "op": "<",
-            "left": {
-              "type": "Identifier",
-              "name": "i"
-            },
-            "right": {
-              "type": "Identifier",
-              "name": "n"
-            }
-          },
-          "update": {
-            "type": "UnaryExpr",
-            "op": "post_inc",
-            "operand": {
-              "type": "Identifier",
-              "name": "i"
-            }
-          },
-          "body": [
-            {
-              "type": "PrintStatement",
-              "format_string": null,
-              "args": [
-                {
-                  "type": "ArrayAccess",
-                  "name": "arr",
-                  "index": {
-                    "type": "Identifier",
-                    "name": "i"
-                  }
-                },
-                {
-                  "type": "Literal",
-                  "value": "\" \"",
-                  "lit_type": "string"
-                }
-              ]
-            },
-            {
-              "type": "Assignment",
-              "target": {
-                "type": "Identifier",
-                "name": "sum"
-              },
-              "value": {
+              "type": "IfStatement",
+              "condition": {
                 "type": "BinaryExpr",
-                "op": "+",
+                "op": "===",
                 "left": {
                   "type": "Identifier",
-                  "name": "sum"
+                  "name": "num"
                 },
                 "right": {
-                  "type": "ArrayAccess",
-                  "name": "arr",
-                  "index": {
+                  "type": "Literal",
+                  "value": "2",
+                  "lit_type": "number"
+                }
+              },
+              "then_body": [
+                {
+                  "type": "ReturnStatement",
+                  "value": {
                     "type": "Identifier",
-                    "name": "i"
+                    "name": "num2"
                   }
                 }
-              }
+              ],
+              "else_body": [
+                {
+                  "type": "ForLoop",
+                  "init": {
+                    "type": "VarDecl",
+                    "var_type": "let",
+                    "name": "i",
+                    "initializer": {
+                      "type": "Literal",
+                      "value": "3",
+                      "lit_type": "number"
+                    }
+                  },
+                  "condition": {
+                    "type": "BinaryExpr",
+                    "op": "<=",
+                    "left": {
+                      "type": "Identifier",
+                      "name": "i"
+                    },
+                    "right": {
+                      "type": "Identifier",
+                      "name": "num"
+                    }
+                  },
+                  "update": {
+                    "type": "UnaryExpr",
+                    "op": "post_inc",
+                    "operand": {
+                      "type": "Identifier",
+                      "name": "i"
+                    }
+                  },
+                  "body": [
+                    {
+                      "type": "Assignment",
+                      "target": "sum",
+                      "value": {
+                        "type": "BinaryExpr",
+                        "op": "+",
+                        "left": {
+                          "type": "Identifier",
+                          "name": "num1"
+                        },
+                        "right": {
+                          "type": "Identifier",
+                          "name": "num2"
+                        }
+                      }
+                    },
+                    {
+                      "type": "Assignment",
+                      "target": "num1",
+                      "value": {
+                        "type": "Identifier",
+                        "name": "num2"
+                      }
+                    },
+                    {
+                      "type": "Assignment",
+                      "target": "num2",
+                      "value": {
+                        "type": "Identifier",
+                        "name": "sum"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "ReturnStatement",
+                  "value": {
+                    "type": "Identifier",
+                    "name": "num2"
+                  }
+                }
+              ]
             }
           ]
-        },
+        }
+      ]
+    },
+    {
+      "type": "PrintStatement",
+      "format_string": null,
+      "args": [
         {
-          "type": "PrintStatement",
-          "format_string": null,
-          "args": []
-        },
-        {
-          "type": "PrintStatement",
-          "format_string": null,
-          "args": [
-            {
-              "type": "Literal",
-              "value": "\"Sum of all elements: \"",
-              "lit_type": "string"
-            },
-            {
-              "type": "Identifier",
-              "name": "sum"
-            }
-          ]
-        },
-        {
-          "type": "ReturnStatement",
-          "value": {
+          "type": "BinaryExpr",
+          "op": "+",
+          "left": {
             "type": "Literal",
-            "value": "0",
-            "lit_type": "number"
+            "value": "\"Fibonacci(5): \"",
+            "lit_type": "string"
+          },
+          "right": {
+            "type": "FunctionCall",
+            "name": "fibonacci",
+            "args": [
+              {
+                "type": "Literal",
+                "value": "5",
+                "lit_type": "number"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "type": "PrintStatement",
+      "format_string": null,
+      "args": [
+        {
+          "type": "BinaryExpr",
+          "op": "+",
+          "left": {
+            "type": "Literal",
+            "value": "\"Fibonacci(8): \"",
+            "lit_type": "string"
+          },
+          "right": {
+            "type": "FunctionCall",
+            "name": "fibonacci",
+            "args": [
+              {
+                "type": "Literal",
+                "value": "8",
+                "lit_type": "number"
+              }
+            ]
           }
         }
       ]
