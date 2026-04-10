@@ -45,14 +45,21 @@ class CodeGenerator:
 
     # ── Helpers ───────────────────────────────────────────────────────────
 
-    @staticmethod
-    def _collect_variables(instructions: list) -> set:
-        """Return the set of all variable names that are assigned to."""
+    def _collect_block_variables(self, blocks: list) -> set:
+        """Collect all variables assigned within a list of blocks recursively."""
         variables = set()
-        for instr in instructions:
-            dest = instr.get("dest")
-            if dest and instr["op"] not in ("label", "jmp", "jz", "print"):
-                variables.add(dest)
+        for block in blocks:
+            t = block.get("type")
+            if t in ("assign", "expr", "unary", "input", "alloc_array", "array_load", "call"):
+                dest = block.get("dest")
+                if dest:
+                    variables.add(dest)
+            elif t == "if":
+                variables.update(self._collect_block_variables(block.get("then_body", [])))
+                variables.update(self._collect_block_variables(block.get("else_body", []) or []))
+            elif t == "while":
+                variables.update(self._collect_block_variables(block.get("cond_blocks", []) or []))
+                variables.update(self._collect_block_variables(block.get("body", [])))
         return variables
 
     @staticmethod
@@ -441,31 +448,57 @@ class CodeGenerator:
 
     def _generate_c(self, instructions: list) -> str:
         blocks = self._build_blocks(instructions, "c")
-        variables = self._collect_variables(instructions)
         lines = ['#include <stdio.h>', '']
 
         has_main = any(b.get("type") == "func_decl" and b.get("name") == "main" for b in blocks)
+        top_level = [b for b in blocks if b.get("type") != "func_decl"]
 
         for block in blocks:
-            if block.get("type") == "func_decl" and block.get("name") != "main":
-                self._emit_c_blocks([block], lines, indent=0)
+            if block.get("type") == "func_decl":
+                name = block.get("name")
+                if name == "main":
+                    continue
+                # Collect locals
+                locals_set = self._collect_block_variables(block["body"])
+                params = {p for p in block.get("params", [])}
+                user_vars = sorted(locals_set - params)
+                
+                params_str = ", ".join(f"int {p}" for p in block.get("params", []))
+                lines.append(f'int {name}({params_str}) {{')
+                
+                if user_vars:
+                    lines.append(f'    int {", ".join(user_vars)};')
+                    lines.append('')
+                self._emit_c_blocks(block["body"], lines, indent=1)
+                
+                has_return = block["body"] and block["body"][-1].get("type") == "return"
+                if not has_return:
+                    lines.append('    return 0;')
+                lines.append('}')
+                lines.append('')
 
         lines.append("int main() {")
-        user_vars = sorted(v for v in variables if not self._is_temp(v))
+        main_body = []
+        if has_main:
+            main_block = next(b for b in blocks if b.get("type") == "func_decl" and b.get("name") == "main")
+            main_body = main_block["body"]
+        else:
+            main_body = top_level
+
+        locals_set = self._collect_block_variables(main_body)
+        user_vars = sorted(locals_set)
         if user_vars:
             lines.append(f'    int {", ".join(user_vars)};')
             lines.append('')
+
+        if main_body:
+            self._emit_c_blocks(main_body, lines, indent=1)
             
-        if has_main:
-            main_block = next(b for b in blocks if b.get("type") == "func_decl" and b.get("name") == "main")
-            self._emit_c_blocks(main_block["body"], lines, indent=1)
-        else:
-            top_level = [b for b in blocks if b.get("type") != "func_decl"]
-            if top_level:
-                self._emit_c_blocks(top_level, lines, indent=1)
-        
-        lines.append('')
-        lines.append('    return 0;')
+        has_return = main_body and main_body[-1].get("type") == "return"
+        if not has_return:
+            if main_body and main_body[-1].get("type") != "return":
+                lines.append('')
+            lines.append('    return 0;')
         lines.append("}")
 
         lines.append('')
@@ -484,7 +517,12 @@ class CodeGenerator:
                 lines.append(f'{pad}{block["dest"]} = {expr};')
 
             elif t == "unary":
-                sym = "-" if block["op"] == "neg" else "!"
+                op = block["op"]
+                if op == "neg": sym = "-"
+                elif op in ("not", "!"): sym = "!"
+                elif op == "ref": sym = "&"
+                elif op == "deref": sym = "*"
+                else: sym = op
                 lines.append(f'{pad}{block["dest"]} = {sym}{block["arg1"]};')
 
             elif t == "print":
@@ -514,20 +552,14 @@ class CodeGenerator:
                     lines.append(f'{pad}}}')
 
             elif t == "func_decl":
-                params = []
-                for p in block.get("params", []):
-                    params.append(f"int {p}")
-                params_str = ", ".join(params)
-                lines.append(f'{pad}int {block["name"]}({params_str}) {{')
-                self._emit_c_blocks(block["body"], lines, indent + 1)
-                lines.append(f'{pad}}}')
+                pass
 
             elif t == "return":
                 if block.get("value") is not None:
                     val = self._format_value(block["value"], "c")
                     lines.append(f'{pad}return {val};')
                 else:
-                    lines.append(f'{pad}return;')
+                    lines.append(f'{pad}return 0;')
 
             elif t == "call":
                 args_str = ", ".join(block.get("args", []))
@@ -578,16 +610,27 @@ class CodeGenerator:
             else:
                 fmt_parts = []
                 clean_args = []
+                import re
                 for a in args:
                     if self._is_string_literal(a):
-                        fmt_parts.append("%s")
-                        clean_args.append(a)
+                        clean_str = self._clean_string(a)
+                        matches = re.findall(r'\{(.*?)\}', clean_str)
+                        if matches:
+                            c_fmt = re.sub(r'\{(.*?)\}', r'%d', clean_str)
+                            fmt_parts.append(c_fmt)
+                            clean_args.extend(matches)
+                        else:
+                            fmt_parts.append("%s")
+                            clean_args.append(a)
                     else:
                         fmt_parts.append("%d")
-                        clean_args.append(a)
+                        clean_args.append(self._format_value(a, "c"))
                 fmt_str = " ".join(fmt_parts) + "\\n"
-                args_str = ", ".join(clean_args)
-                lines.append(f'{pad}printf("{fmt_str}", {args_str});')
+                if clean_args:
+                    args_str = ", ".join(clean_args)
+                    lines.append(f'{pad}printf("{fmt_str}", {args_str});')
+                else:
+                    lines.append(f'{pad}printf("{fmt_str}");')
 
     # ═══════════════════════════════════════════════════════════════════════
     #  C++ Code Generator
@@ -595,31 +638,57 @@ class CodeGenerator:
 
     def _generate_cpp(self, instructions: list) -> str:
         blocks = self._build_blocks(instructions, "cpp")
-        variables = self._collect_variables(instructions)
         lines = ['#include <iostream>', 'using namespace std;', '']
 
         has_main = any(b.get("type") == "func_decl" and b.get("name") == "main" for b in blocks)
+        top_level = [b for b in blocks if b.get("type") != "func_decl"]
 
         for block in blocks:
-            if block.get("type") == "func_decl" and block.get("name") != "main":
-                self._emit_cpp_blocks([block], lines, indent=0)
+            if block.get("type") == "func_decl":
+                name = block.get("name")
+                if name == "main":
+                    continue
+                # Collect locals
+                locals_set = self._collect_block_variables(block["body"])
+                params = {p for p in block.get("params", [])}
+                user_vars = sorted(locals_set - params)
+                
+                params_str = ", ".join(f"int {p}" for p in block.get("params", []))
+                lines.append(f'int {name}({params_str}) {{')
+                
+                if user_vars:
+                    lines.append(f'    int {", ".join(user_vars)};')
+                    lines.append('')
+                self._emit_cpp_blocks(block["body"], lines, indent=1)
+                
+                has_return = block["body"] and block["body"][-1].get("type") == "return"
+                if not has_return:
+                    lines.append('    return 0;')
+                lines.append('}')
+                lines.append('')
 
         lines.append("int main() {")
-        user_vars = sorted(v for v in variables if not self._is_temp(v))
+        main_body = []
+        if has_main:
+            main_block = next(b for b in blocks if b.get("type") == "func_decl" and b.get("name") == "main")
+            main_body = main_block["body"]
+        else:
+            main_body = top_level
+
+        locals_set = self._collect_block_variables(main_body)
+        user_vars = sorted(locals_set)
         if user_vars:
             lines.append(f'    int {", ".join(user_vars)};')
             lines.append('')
+
+        if main_body:
+            self._emit_cpp_blocks(main_body, lines, indent=1)
             
-        if has_main:
-            main_block = next(b for b in blocks if b.get("type") == "func_decl" and b.get("name") == "main")
-            self._emit_cpp_blocks(main_block["body"], lines, indent=1)
-        else:
-            top_level = [b for b in blocks if b.get("type") != "func_decl"]
-            if top_level:
-                self._emit_cpp_blocks(top_level, lines, indent=1)
-        
-        lines.append('')
-        lines.append('    return 0;')
+        has_return = main_body and main_body[-1].get("type") == "return"
+        if not has_return:
+            if main_body and main_body[-1].get("type") != "return":
+                lines.append('')
+            lines.append('    return 0;')
         lines.append("}")
 
         lines.append('')
@@ -638,7 +707,12 @@ class CodeGenerator:
                 lines.append(f'{pad}{block["dest"]} = {expr};')
 
             elif t == "unary":
-                sym = "-" if block["op"] == "neg" else "!"
+                op = block["op"]
+                if op == "neg": sym = "-"
+                elif op in ("not", "!"): sym = "!"
+                elif op == "ref": sym = "&"
+                elif op == "deref": sym = "*"
+                else: sym = op
                 lines.append(f'{pad}{block["dest"]} = {sym}{block["arg1"]};')
 
             elif t == "print":
@@ -666,20 +740,14 @@ class CodeGenerator:
                     lines.append(f'{pad}}}')
 
             elif t == "func_decl":
-                params = []
-                for p in block.get("params", []):
-                    params.append(f"int {p}")
-                params_str = ", ".join(params)
-                lines.append(f'{pad}int {block["name"]}({params_str}) {{')
-                self._emit_cpp_blocks(block["body"], lines, indent + 1)
-                lines.append(f'{pad}}}')
+                pass
 
             elif t == "return":
                 if block.get("value") is not None:
                     val = self._format_value(block["value"], "cpp")
                     lines.append(f'{pad}return {val};')
                 else:
-                    lines.append(f'{pad}return;')
+                    lines.append(f'{pad}return 0;')
 
             elif t == "call":
                 args_str = ", ".join(block.get("args", []))
@@ -698,46 +766,125 @@ class CodeGenerator:
             elif t == "input":
                 lines.append(f'{pad}cin >> {block["dest"]};')
 
+    def _parse_printf_format(self, fmt: str, args: list) -> list:
+        """
+        Parse a C printf format string and return a list of cout expression parts.
+        E.g. "First %d Fibonacci numbers:\n" with args=["count"]
+             → ['"First "', 'count', '" Fibonacci numbers:"', 'endl']
+        """
+        parts = []
+        arg_idx = 0
+        current_literal = ""
+        i = 0
+
+        while i < len(fmt):
+            # ── Escape sequences: \n, \t, \\, etc. ──
+            if fmt[i] == '\\' and i + 1 < len(fmt):
+                esc = fmt[i + 1]
+                if esc == 'n':
+                    # Flush literal, then add endl
+                    if current_literal:
+                        parts.append(f'"{current_literal}"')
+                        current_literal = ""
+                    parts.append('endl')
+                    i += 2
+                    continue
+                elif esc == 't':
+                    current_literal += '\\t'
+                    i += 2
+                    continue
+                elif esc == '\\':
+                    current_literal += '\\\\'
+                    i += 2
+                    continue
+                else:
+                    current_literal += fmt[i]
+                    i += 1
+                    continue
+
+            # ── Format specifier: %d, %s, %f, %ld, etc. ──
+            if fmt[i] == '%' and i + 1 < len(fmt):
+                next_ch = fmt[i + 1]
+                if next_ch == '%':
+                    current_literal += '%'
+                    i += 2
+                    continue
+                # Walk past flags, width, precision, length modifiers
+                j = i + 1
+                while j < len(fmt) and fmt[j] in '-+ 0#':
+                    j += 1
+                while j < len(fmt) and fmt[j].isdigit():
+                    j += 1
+                if j < len(fmt) and fmt[j] == '.':
+                    j += 1
+                    while j < len(fmt) and fmt[j].isdigit():
+                        j += 1
+                while j < len(fmt) and fmt[j] in 'hlLqjzt':
+                    j += 1
+                # Conversion character
+                if j < len(fmt) and fmt[j] in 'diouxXeEfFgGaAcspn':
+                    if current_literal:
+                        parts.append(f'"{current_literal}"')
+                        current_literal = ""
+                    if arg_idx < len(args):
+                        parts.append(args[arg_idx])
+                        arg_idx += 1
+                    i = j + 1
+                    continue
+
+            # ── Normal character ──
+            current_literal += fmt[i]
+            i += 1
+
+        if current_literal:
+            parts.append(f'"{current_literal}"')
+
+        if not parts:
+            parts.append('""')
+
+        return parts
+
     def _emit_cpp_print(self, block: dict, lines: list, pad: str):
         args = block["args"]
         fmt = block.get("format_string")
         source_func = block.get("source_func", "")
 
         if source_func == "printf" and args:
-            # printf call → convert to cout
             fmt_str = args[0]
             rest = args[1:]
-            if self._is_string_literal(fmt_str) and rest:
-                parts = " << ".join(rest)
-                lines.append(f'{pad}cout << {parts} << endl;')
-            elif self._is_string_literal(fmt_str):
-                clean = self._clean_string(fmt_str).replace("\\n", "").replace("%d", "").strip()
-                if clean:
-                    lines.append(f'{pad}cout << "{clean}" << endl;')
-                else:
-                    lines.append(f'{pad}cout << endl;')
+            if self._is_string_literal(fmt_str):
+                clean = self._clean_string(fmt_str)
+                parts = self._parse_printf_format(clean, rest)
+                cout_expr = " << ".join(parts)
+                lines.append(f'{pad}cout << {cout_expr};')
             else:
                 parts = " << ".join(args)
-                lines.append(f'{pad}cout << {parts} << endl;')
+                lines.append(f'{pad}cout << {parts};')
         elif fmt:
             clean_fmt = self._clean_string(fmt)
-            if args:
-                parts = " << ".join(args)
-                lines.append(f'{pad}cout << {parts} << endl;')
-            else:
-                text = clean_fmt.replace("\\n", "")
-                if text:
-                    lines.append(f'{pad}cout << "{text}" << endl;')
-                else:
-                    lines.append(f'{pad}cout << endl;')
+            parts = self._parse_printf_format(clean_fmt, args)
+            cout_expr = " << ".join(parts)
+            lines.append(f'{pad}cout << {cout_expr};')
         else:
             if not args:
                 lines.append(f'{pad}cout << endl;')
             else:
-                parts = " << ".join(
-                    self._format_value(a, "cpp") for a in args
-                )
-                lines.append(f'{pad}cout << {parts} << endl;')
+                parts = []
+                import re
+                for a in args:
+                    if self._is_string_literal(a):
+                        clean_str = self._clean_string(a)
+                        pieces = re.split(r'\{(.*?)\}', clean_str)
+                        for idx, piece in enumerate(pieces):
+                            if idx % 2 == 0:
+                                if piece:
+                                    parts.append(f'"{piece}"')
+                            else:
+                                parts.append(piece)
+                    else:
+                        parts.append(self._format_value(a, "cpp"))
+                parts_str = " << ".join(parts)
+                lines.append(f'{pad}cout << {parts_str} << endl;')
 
     # ═══════════════════════════════════════════════════════════════════════
     #  Python Code Generator
@@ -777,7 +924,12 @@ class CodeGenerator:
                 lines.append(f'{pad}{block["dest"]} = {expr}')
 
             elif t == "unary":
-                sym = "-" if block["op"] == "neg" else "not "
+                op = block["op"]
+                if op == "neg": sym = "-"
+                elif op in ("not", "!"): sym = "not "
+                elif op == "ref": sym = "&"
+                elif op == "deref": sym = "*"
+                else: sym = op
                 lines.append(f'{pad}{block["dest"]} = {sym}{block["arg1"]}')
 
             elif t == "print":
@@ -811,7 +963,10 @@ class CodeGenerator:
                     self._emit_py_blocks(block["body"], lines, indent + 1)
 
             elif t == "return":
-                if block.get("value") is not None:
+                # Skip 'return 0' at module level — invalid in Python
+                if indent == 0:
+                    pass  # top-level return from C main(), skip it
+                elif block.get("value") is not None:
                     val = self._format_value(block["value"], "python")
                     lines.append(f'{pad}return {val}')
                 else:
@@ -834,41 +989,127 @@ class CodeGenerator:
             elif t == "input":
                 lines.append(f'{pad}{block["dest"]} = int(input())')
 
+    def _parse_printf_for_python(self, fmt: str, args: list) -> tuple:
+        """
+        Parse a C printf format string and return (print_content, ends_with_newline).
+        Converts to Python f-string style.
+        E.g. "First %d Fibonacci numbers:\\n" with args=["count"]
+             → ('f"First {count} Fibonacci numbers:"', True)
+        E.g. "%d, " with args=["firstTerm"]
+             → ('f"{firstTerm}, "', False)
+        """
+        arg_idx = 0
+        current_literal = ""
+        ends_with_newline = False
+        i = 0
+        uses_fstring = False
+
+        while i < len(fmt):
+            # ── Escape sequences ──
+            if fmt[i] == '\\' and i + 1 < len(fmt):
+                esc = fmt[i + 1]
+                if esc == 'n':
+                    # Check if this is the last thing in the format string
+                    if i + 2 >= len(fmt):
+                        ends_with_newline = True
+                    else:
+                        current_literal += '\\n'
+                    i += 2
+                    continue
+                elif esc == 't':
+                    current_literal += '\\t'
+                    i += 2
+                    continue
+                elif esc == '\\':
+                    current_literal += '\\\\'
+                    i += 2
+                    continue
+                else:
+                    current_literal += fmt[i]
+                    i += 1
+                    continue
+
+            # ── Format specifiers ──
+            if fmt[i] == '%' and i + 1 < len(fmt):
+                next_ch = fmt[i + 1]
+                if next_ch == '%':
+                    current_literal += '%'
+                    i += 2
+                    continue
+                # Walk past flags, width, precision, length modifiers
+                j = i + 1
+                while j < len(fmt) and fmt[j] in '-+ 0#':
+                    j += 1
+                while j < len(fmt) and fmt[j].isdigit():
+                    j += 1
+                if j < len(fmt) and fmt[j] == '.':
+                    j += 1
+                    while j < len(fmt) and fmt[j].isdigit():
+                        j += 1
+                while j < len(fmt) and fmt[j] in 'hlLqjzt':
+                    j += 1
+                # Conversion character
+                if j < len(fmt) and fmt[j] in 'diouxXeEfFgGaAcspn':
+                    if arg_idx < len(args):
+                        current_literal += '{' + args[arg_idx] + '}'
+                        arg_idx += 1
+                        uses_fstring = True
+                    i = j + 1
+                    continue
+
+            # ── Normal character ──
+            current_literal += fmt[i]
+            i += 1
+
+        if uses_fstring:
+            content = f'f"{current_literal}"'
+        elif current_literal:
+            content = f'"{current_literal}"'
+        else:
+            content = None
+
+        return content, ends_with_newline
+
     def _emit_py_print(self, block: dict, lines: list, pad: str):
         args = block["args"]
         fmt = block.get("format_string")
         source_func = block.get("source_func", "")
 
         if source_func == "printf" and args:
-            # printf("fmt", a, b) → print(a, b)
             fmt_str = args[0]
             rest = args[1:]
             if self._is_string_literal(fmt_str):
-                clean = self._clean_string(fmt_str).replace("%d", "").replace("%s", "")
-                if rest:
-                    args_str = ", ".join(rest)
-                    lines.append(f'{pad}print("{clean}", {args_str}, end="")')
-                elif clean:
-                    lines.append(f'{pad}print("{clean}", end="")')
+                clean = self._clean_string(fmt_str)
+                content, has_newline = self._parse_printf_for_python(clean, rest)
+                if content:
+                    if has_newline:
+                        lines.append(f'{pad}print({content})')
+                    else:
+                        lines.append(f'{pad}print({content}, end="")')
                 else:
-                    lines.append(f'{pad}print(end="")')
+                    if has_newline:
+                        lines.append(f'{pad}print()')
+                    else:
+                        lines.append(f'{pad}print(end="")')
             else:
                 args_str = ", ".join(args)
                 lines.append(f'{pad}print({args_str})')
         elif source_func == "console.log" and args:
-            # console.log(a, b) → print(a, b)
             args_str = ", ".join(
                 self._format_value(a, "python") for a in args
             )
             lines.append(f'{pad}print({args_str})')
         elif fmt:
-            if args:
-                args_str = ", ".join(args)
-                lines.append(f'{pad}print({args_str}, end="")')
+            clean_fmt = self._clean_string(fmt)
+            content, has_newline = self._parse_printf_for_python(clean_fmt, args)
+            if content:
+                if has_newline:
+                    lines.append(f'{pad}print({content})')
+                else:
+                    lines.append(f'{pad}print({content}, end="")')
             else:
-                clean = self._clean_string(fmt).replace("%d", "").strip()
-                if clean:
-                    lines.append(f'{pad}print("{clean}", end="")')
+                if has_newline:
+                    lines.append(f'{pad}print()')
                 else:
                     lines.append(f'{pad}print(end="")')
         else:
@@ -886,7 +1127,6 @@ class CodeGenerator:
 
     def _generate_js(self, instructions: list) -> str:
         blocks = self._build_blocks(instructions, "javascript")
-        variables = self._collect_variables(instructions)
         lines = []
         declared = set()
 
@@ -931,7 +1171,12 @@ class CodeGenerator:
                     lines.append(f'{pad}{dest} = {expr};')
 
             elif t == "unary":
-                sym = "-" if block["op"] == "neg" else "!"
+                op = block["op"]
+                if op == "neg": sym = "-"
+                elif op in ("not", "!"): sym = "!"
+                elif op == "ref": sym = "&"
+                elif op == "deref": sym = "*"
+                else: sym = op
                 dest = block["dest"]
                 if dest not in declared:
                     lines.append(f'{pad}let {dest} = {sym}{block["arg1"]};')
@@ -1004,25 +1249,118 @@ class CodeGenerator:
                 else:
                     lines.append(f'{pad}{dest} = parseInt(prompt("Input:") || "0");')
 
+    def _parse_printf_for_js(self, fmt: str, args: list) -> tuple:
+        """
+        Parse a C printf format string and return (print_content, ends_with_newline).
+        Converts to JavaScript template literal style.
+        E.g. "First %d Fibonacci numbers:\\n" with args=["count"]
+             → ('`First ${count} Fibonacci numbers:`', True)
+        E.g. "%d, " with args=["firstTerm"]
+             → ('`${firstTerm}, `', False)
+        """
+        arg_idx = 0
+        current_literal = ""
+        ends_with_newline = False
+        i = 0
+        uses_template = False
+
+        while i < len(fmt):
+            # ── Escape sequences ──
+            if fmt[i] == '\\' and i + 1 < len(fmt):
+                esc = fmt[i + 1]
+                if esc == 'n':
+                    # Check if this is the last thing in the format string
+                    if i + 2 >= len(fmt):
+                        ends_with_newline = True
+                    else:
+                        current_literal += '\\n'
+                    i += 2
+                    continue
+                elif esc == 't':
+                    current_literal += '\\t'
+                    i += 2
+                    continue
+                elif esc == '\\':
+                    current_literal += '\\\\'
+                    i += 2
+                    continue
+                # Also escape backticks for JS template literals
+                elif esc == '`':
+                    current_literal += '\\`'
+                    i += 2
+                    continue
+                else:
+                    current_literal += fmt[i]
+                    i += 1
+                    continue
+
+            if fmt[i] == '`':
+                current_literal += '\\`'
+                i += 1
+                continue
+
+            # ── Format specifiers ──
+            if fmt[i] == '%' and i + 1 < len(fmt):
+                next_ch = fmt[i + 1]
+                if next_ch == '%':
+                    current_literal += '%'
+                    i += 2
+                    continue
+                # Walk past flags, width, precision, length modifiers
+                j = i + 1
+                while j < len(fmt) and fmt[j] in '-+ 0#':
+                    j += 1
+                while j < len(fmt) and fmt[j].isdigit():
+                    j += 1
+                if j < len(fmt) and fmt[j] == '.':
+                    j += 1
+                    while j < len(fmt) and fmt[j].isdigit():
+                        j += 1
+                while j < len(fmt) and fmt[j] in 'hlLqjzt':
+                    j += 1
+                # Conversion character
+                if j < len(fmt) and fmt[j] in 'diouxXeEfFgGaAcspn':
+                    if arg_idx < len(args):
+                        current_literal += '${' + args[arg_idx] + '}'
+                        arg_idx += 1
+                        uses_template = True
+                    i = j + 1
+                    continue
+
+            # ── Normal character ──
+            current_literal += fmt[i]
+            i += 1
+
+        if uses_template:
+            content = f'`{current_literal}`'
+        elif current_literal:
+            content = f'"{current_literal}"'
+        else:
+            content = None
+
+        return content, ends_with_newline
+
     def _emit_js_print(self, block: dict, lines: list, pad: str):
         args = block["args"]
         fmt = block.get("format_string")
         source_func = block.get("source_func", "")
 
         if source_func == "printf" and args:
-            # printf("fmt", a, b) → console.log(a, b)
             fmt_str = args[0]
             rest = args[1:]
-            if self._is_string_literal(fmt_str) and rest:
-                clean = self._clean_string(fmt_str).replace("%d", "").replace("%s", "")
-                args_str = ", ".join(rest)
-                lines.append(f'{pad}process.stdout.write("{clean}" + {args_str});')
-            elif self._is_string_literal(fmt_str):
-                clean = self._clean_string(fmt_str).replace("%d", "").replace("%s", "")
-                if clean:
-                    lines.append(f'{pad}process.stdout.write("{clean}");')
+            if self._is_string_literal(fmt_str):
+                clean = self._clean_string(fmt_str)
+                content, has_newline = self._parse_printf_for_js(clean, rest)
+                if content:
+                    if has_newline:
+                        lines.append(f'{pad}process.stdout.write({content} + "\\n");')
+                    else:
+                        lines.append(f'{pad}process.stdout.write({content});')
                 else:
-                    lines.append(f'{pad}process.stdout.write("");')
+                    if has_newline:
+                        lines.append(f'{pad}process.stdout.write("\\n");')
+                    else:
+                        pass # Nothing to print
             else:
                 args_str = ", ".join(args)
                 lines.append(f'{pad}process.stdout.write({args_str});')
@@ -1033,15 +1371,18 @@ class CodeGenerator:
             )
             lines.append(f'{pad}console.log({args_str});')
         elif fmt:
-            if args:
-                args_str = ", ".join(args)
-                lines.append(f'{pad}console.log({args_str});')
-            else:
-                clean = self._clean_string(fmt).replace("\\n", "").replace("%d", "").strip()
-                if clean:
-                    lines.append(f'{pad}console.log("{clean}");')
+            clean_fmt = self._clean_string(fmt)
+            content, has_newline = self._parse_printf_for_js(clean_fmt, args)
+            if content:
+                if has_newline:
+                    lines.append(f'{pad}process.stdout.write({content} + "\\n");')
                 else:
-                    lines.append(f'{pad}console.log();')
+                    lines.append(f'{pad}process.stdout.write({content});')
+            else:
+                if has_newline:
+                    lines.append(f'{pad}process.stdout.write("\\n");')
+                else:
+                    pass
         else:
             if not args:
                 lines.append(f'{pad}console.log();')

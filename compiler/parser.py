@@ -1166,7 +1166,7 @@ class Parser:
         return left
 
     def _parse_unary(self):
-        if self.peek().type == TokenType.OPERATOR and self.peek().value in ("-", "!", "not"):
+        if self.peek().type == TokenType.OPERATOR and self.peek().value in ("-", "!", "not", "&", "*"):
             op = self.advance().value
             operand = self._parse_unary()
             return UnaryExpr(op, operand)

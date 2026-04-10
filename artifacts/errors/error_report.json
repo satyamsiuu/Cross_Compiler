@@ -1,7 +1,7 @@
 {
-  "phase": "Validation",
-  "error_type": "ValidationError",
-  "message": "Command '['gcc', '/tmp/tmp_tc2yf08.c', '-o', '/tmp/tmp_tc2yf08.c.out']' returned non-zero exit status 1.",
-  "line": null,
-  "column": null
+  "phase": "Syntax Analysis",
+  "error_type": "ParserError",
+  "message": "Unexpected token in expression: '&' (OPERATOR)",
+  "line": 8,
+  "column": 17
 }

@@ -285,7 +285,7 @@ class IRGenerator:
             else:
                 operand_loc = self._generate_expr(node.operand)
                 temp = self._new_temp()
-                op_map = {"-": "neg", "!": "not", "not": "not"}
+                op_map = {"-": "neg", "!": "not", "not": "not", "&": "ref", "*": "deref"}
                 op_str = op_map.get(node.op, node.op)
                 self._emit(op_str, dest=temp, arg1=operand_loc)
                 return temp

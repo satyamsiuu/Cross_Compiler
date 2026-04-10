@@ -3,219 +3,118 @@
   "body": [
     {
       "type": "FunctionDecl",
-      "name": "fibonacci",
-      "params": [
-        {
-          "type": "auto",
-          "name": "num"
-        }
-      ],
-      "return_type": "auto",
+      "name": "main",
+      "params": [],
+      "return_type": "int",
       "body": [
         {
           "type": "VarDecl",
-          "var_type": "let",
-          "name": "num1",
-          "initializer": {
-            "type": "Literal",
-            "value": "0",
-            "lit_type": "number"
-          }
-        },
-        {
-          "type": "VarDecl",
-          "var_type": "let",
-          "name": "num2",
-          "initializer": {
-            "type": "Literal",
-            "value": "1",
-            "lit_type": "number"
-          }
-        },
-        {
-          "type": "VarDecl",
-          "var_type": "let",
-          "name": "sum",
+          "var_type": "int",
+          "name": "num",
           "initializer": null
         },
         {
-          "type": "IfStatement",
-          "condition": {
-            "type": "BinaryExpr",
-            "op": "===",
-            "left": {
+          "type": "PrintStatement",
+          "format_string": "\"Enter a number: \"",
+          "args": []
+        },
+        {
+          "type": "FunctionCall",
+          "name": "scanf",
+          "args": [
+            {
+              "type": "Literal",
+              "value": "\"%d\"",
+              "lit_type": "string"
+            },
+            {
+              "type": "UnaryExpr",
+              "op": "&",
+              "operand": {
+                "type": "Identifier",
+                "name": "num"
+              }
+            }
+          ]
+        },
+        {
+          "type": "PrintStatement",
+          "format_string": "\"Multiplication Table of %d:\\n\"",
+          "args": [
+            {
               "type": "Identifier",
               "name": "num"
-            },
-            "right": {
+            }
+          ]
+        },
+        {
+          "type": "ForLoop",
+          "init": {
+            "type": "VarDecl",
+            "var_type": "int",
+            "name": "i",
+            "initializer": {
               "type": "Literal",
               "value": "1",
               "lit_type": "number"
             }
           },
-          "then_body": [
-            {
-              "type": "ReturnStatement",
-              "value": {
-                "type": "Identifier",
-                "name": "num1"
-              }
+          "condition": {
+            "type": "BinaryExpr",
+            "op": "<=",
+            "left": {
+              "type": "Identifier",
+              "name": "i"
+            },
+            "right": {
+              "type": "Literal",
+              "value": "10",
+              "lit_type": "number"
             }
-          ],
-          "else_body": [
+          },
+          "update": {
+            "type": "UnaryExpr",
+            "op": "post_inc",
+            "operand": {
+              "type": "Identifier",
+              "name": "i"
+            }
+          },
+          "body": [
             {
-              "type": "IfStatement",
-              "condition": {
-                "type": "BinaryExpr",
-                "op": "===",
-                "left": {
+              "type": "PrintStatement",
+              "format_string": "\"%d x %d = %d\\n\"",
+              "args": [
+                {
                   "type": "Identifier",
                   "name": "num"
                 },
-                "right": {
-                  "type": "Literal",
-                  "value": "2",
-                  "lit_type": "number"
-                }
-              },
-              "then_body": [
                 {
-                  "type": "ReturnStatement",
-                  "value": {
-                    "type": "Identifier",
-                    "name": "num2"
-                  }
-                }
-              ],
-              "else_body": [
-                {
-                  "type": "ForLoop",
-                  "init": {
-                    "type": "VarDecl",
-                    "var_type": "let",
-                    "name": "i",
-                    "initializer": {
-                      "type": "Literal",
-                      "value": "3",
-                      "lit_type": "number"
-                    }
-                  },
-                  "condition": {
-                    "type": "BinaryExpr",
-                    "op": "<=",
-                    "left": {
-                      "type": "Identifier",
-                      "name": "i"
-                    },
-                    "right": {
-                      "type": "Identifier",
-                      "name": "num"
-                    }
-                  },
-                  "update": {
-                    "type": "UnaryExpr",
-                    "op": "post_inc",
-                    "operand": {
-                      "type": "Identifier",
-                      "name": "i"
-                    }
-                  },
-                  "body": [
-                    {
-                      "type": "Assignment",
-                      "target": "sum",
-                      "value": {
-                        "type": "BinaryExpr",
-                        "op": "+",
-                        "left": {
-                          "type": "Identifier",
-                          "name": "num1"
-                        },
-                        "right": {
-                          "type": "Identifier",
-                          "name": "num2"
-                        }
-                      }
-                    },
-                    {
-                      "type": "Assignment",
-                      "target": "num1",
-                      "value": {
-                        "type": "Identifier",
-                        "name": "num2"
-                      }
-                    },
-                    {
-                      "type": "Assignment",
-                      "target": "num2",
-                      "value": {
-                        "type": "Identifier",
-                        "name": "sum"
-                      }
-                    }
-                  ]
+                  "type": "Identifier",
+                  "name": "i"
                 },
                 {
-                  "type": "ReturnStatement",
-                  "value": {
+                  "type": "BinaryExpr",
+                  "op": "*",
+                  "left": {
                     "type": "Identifier",
-                    "name": "num2"
+                    "name": "num"
+                  },
+                  "right": {
+                    "type": "Identifier",
+                    "name": "i"
                   }
                 }
               ]
             }
           ]
-        }
-      ]
-    },
-    {
-      "type": "PrintStatement",
-      "format_string": null,
-      "args": [
+        },
         {
-          "type": "BinaryExpr",
-          "op": "+",
-          "left": {
+          "type": "ReturnStatement",
+          "value": {
             "type": "Literal",
-            "value": "\"Fibonacci(5): \"",
-            "lit_type": "string"
-          },
-          "right": {
-            "type": "FunctionCall",
-            "name": "fibonacci",
-            "args": [
-              {
-                "type": "Literal",
-                "value": "5",
-                "lit_type": "number"
-              }
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "type": "PrintStatement",
-      "format_string": null,
-      "args": [
-        {
-          "type": "BinaryExpr",
-          "op": "+",
-          "left": {
-            "type": "Literal",
-            "value": "\"Fibonacci(8): \"",
-            "lit_type": "string"
-          },
-          "right": {
-            "type": "FunctionCall",
-            "name": "fibonacci",
-            "args": [
-              {
-                "type": "Literal",
-                "value": "8",
-                "lit_type": "number"
-              }
-            ]
+            "value": "0",
+            "lit_type": "number"
           }
         }
       ]

@@ -1,40 +1,19 @@
 {
   "symbols": [
     {
-      "name": "fibonacci",
-      "type": "auto",
+      "name": "main",
+      "type": "int",
       "scope": "global",
       "line": null,
       "column": null,
       "kind": "function",
-      "param_count": 1
+      "param_count": 0
     },
     {
       "name": "num",
-      "type": "auto",
-      "scope": "fibonacci",
-      "line": null,
-      "column": null
-    },
-    {
-      "name": "num1",
       "type": "int",
-      "scope": "fibonacci",
-      "line": null,
-      "column": null
-    },
-    {
-      "name": "num2",
-      "type": "int",
-      "scope": "fibonacci",
-      "line": null,
-      "column": null
-    },
-    {
-      "name": "sum",
-      "type": "auto",
-      "scope": "fibonacci",
-      "line": null,
+      "scope": "main",
+      "line": 4,
       "column": null
     },
     {
@@ -45,5 +24,5 @@
       "column": null
     }
   ],
-  "total_symbols": 6
+  "total_symbols": 3
 }

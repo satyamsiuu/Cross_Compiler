@@ -1,107 +1,84 @@
 [
   {
     "op": "label",
-    "dest": "fibonacci",
-    "arg1": [
-      "num"
-    ]
+    "dest": "main",
+    "arg1": []
   },
   {
-    "op": "assign",
-    "dest": "num1",
-    "arg1": "0"
+    "op": "print",
+    "dest": "\"Enter a number: \"",
+    "arg1": 0
   },
   {
-    "op": "assign",
-    "dest": "num2",
-    "arg1": "1"
+    "op": "param",
+    "arg1": "\"%d\""
   },
   {
-    "op": "eq",
+    "op": "ref",
     "dest": "t1",
-    "arg1": "num",
-    "arg2": "1"
+    "arg1": "num"
   },
   {
-    "op": "jz",
-    "dest": "L1",
+    "op": "param",
     "arg1": "t1"
   },
   {
-    "op": "return",
-    "arg1": "num1"
+    "op": "call",
+    "dest": "t2",
+    "arg1": "scanf",
+    "arg2": 2
   },
   {
-    "op": "jmp",
-    "dest": "L2"
+    "op": "param",
+    "arg1": "num"
+  },
+  {
+    "op": "print",
+    "dest": "\"Multiplication Table of %d:\\n\"",
+    "arg1": 1
+  },
+  {
+    "op": "assign",
+    "dest": "i",
+    "arg1": "1"
   },
   {
     "op": "label",
     "dest": "L1"
   },
   {
-    "op": "eq",
-    "dest": "t2",
-    "arg1": "num",
-    "arg2": "2"
-  },
-  {
-    "op": "jz",
-    "dest": "L3",
-    "arg1": "t2"
-  },
-  {
-    "op": "return",
-    "arg1": "num2"
-  },
-  {
-    "op": "jmp",
-    "dest": "L4"
-  },
-  {
-    "op": "label",
-    "dest": "L3"
-  },
-  {
-    "op": "assign",
-    "dest": "i",
-    "arg1": "3"
-  },
-  {
-    "op": "label",
-    "dest": "L5"
-  },
-  {
     "op": "lte",
     "dest": "t3",
     "arg1": "i",
-    "arg2": "num"
+    "arg2": "10"
   },
   {
     "op": "jz",
-    "dest": "L6",
+    "dest": "L2",
     "arg1": "t3"
   },
   {
-    "op": "add",
-    "dest": "t4",
-    "arg1": "num1",
-    "arg2": "num2"
+    "op": "param",
+    "arg1": "num"
   },
   {
-    "op": "assign",
-    "dest": "sum",
+    "op": "param",
+    "arg1": "i"
+  },
+  {
+    "op": "mul",
+    "dest": "t4",
+    "arg1": "num",
+    "arg2": "i"
+  },
+  {
+    "op": "param",
     "arg1": "t4"
   },
   {
-    "op": "assign",
-    "dest": "num1",
-    "arg1": "num2"
-  },
-  {
-    "op": "assign",
-    "dest": "num2",
-    "arg1": "sum"
+    "op": "print",
+    "dest": "\"%d x %d = %d\\n\"",
+    "arg1": 3
   },
   {
     "op": "add",
@@ -116,76 +93,17 @@
   },
   {
     "op": "jmp",
-    "dest": "L5"
-  },
-  {
-    "op": "label",
-    "dest": "L6"
-  },
-  {
-    "op": "return",
-    "arg1": "num2"
-  },
-  {
-    "op": "label",
-    "dest": "L4"
+    "dest": "L1"
   },
   {
     "op": "label",
     "dest": "L2"
   },
   {
-    "op": "return"
+    "op": "return",
+    "arg1": "0"
   },
   {
     "op": "end_func"
-  },
-  {
-    "op": "param",
-    "arg1": "5"
-  },
-  {
-    "op": "call",
-    "dest": "t6",
-    "arg1": "fibonacci",
-    "arg2": 1
-  },
-  {
-    "op": "add",
-    "dest": "t7",
-    "arg1": "\"Fibonacci(5): \"",
-    "arg2": "t6"
-  },
-  {
-    "op": "param",
-    "arg1": "t7"
-  },
-  {
-    "op": "print",
-    "arg1": 1
-  },
-  {
-    "op": "param",
-    "arg1": "8"
-  },
-  {
-    "op": "call",
-    "dest": "t8",
-    "arg1": "fibonacci",
-    "arg2": 1
-  },
-  {
-    "op": "add",
-    "dest": "t9",
-    "arg1": "\"Fibonacci(8): \"",
-    "arg2": "t8"
-  },
-  {
-    "op": "param",
-    "arg1": "t9"
-  },
-  {
-    "op": "print",
-    "arg1": 1
   }
 ]

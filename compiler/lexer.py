@@ -211,7 +211,13 @@ class Lexer:
                     continue
 
                 if ch.isalpha() or ch == '_':
-                    self._read_identifier()
+                    # Special case for Python f-strings
+                    if ch == 'f' and self.pos + 1 < len(self.source) and self.source[self.pos + 1] in ('"', "'"):
+                        quote_char = self.source[self.pos + 1]
+                        self._advance() # Skip 'f'
+                        self._read_string(quote_char, prefix='f')
+                    else:
+                        self._read_identifier()
                     continue
 
                 if self.pos + 2 < len(self.source):
@@ -262,9 +268,9 @@ class Lexer:
                 self.column += 1
             self.pos += 1
 
-    def _read_string(self, quote_char):
+    def _read_string(self, quote_char, prefix=""):
         start_line = self.line
-        start_col = self.column
+        start_col = self.column - len(prefix) if prefix else self.column
         result = quote_char
         self._advance()
 
@@ -277,6 +283,11 @@ class Lexer:
             elif ch == quote_char:
                 result += ch
                 self._advance()
+                # If prefix is 'f', we could store 'f"..."' but for now we store '"..."' 
+                # so the AST treats it as a normal string literal. Cross_Compiler's Python 
+                # parser doesn't perfectly support f-string interpolation natively outside 
+                # of `print()`. Let's just output the string without 'f' prefix so it 
+                # parses as a standard STRING token.
                 self.tokens.append(Token(TokenType.STRING, result, start_line, start_col))
                 return
             elif ch == '\n':
